@@ -1,0 +1,58 @@
+html, body {
+  width:  100%;
+  height: 100%;
+  margin: 0;
+}
+
+#content {
+    margin-right:0px;
+    margin-left:0px;
+    vertical-align:middle;
+    width:100%;
+}
+
+.debugtools{
+    background-color:#000;
+    position:absolute;
+    top:0px;
+    right:0px;
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    text-align: center;
+}
+
+.debugtools li {
+    display:inline;
+    margin:3px 0px 3px 0px;
+}
+
+#app::-webkit-scrollbar {
+  display: block;
+}
+body::-webkit-scrollbar {
+  width: 0px;
+}
+::-webkit-scrollbar {
+  background-color: var(--color-scrollbar);
+  width: var(--width-scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  width: var(--width-scrollbar-track);
+  background: var(--color-scrollbar-thumb);
+  border-radius: var(--radius-scrollbar-thumb);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-resizer {
+  display: none;
+  width: 0px;
+  background-color: transparent;
+}
+::-webkit-scrollbar-button {
+  height: 0px;
+}
+::-webkit-scrollbar-corner {
+  display: none;
+}
