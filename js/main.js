@@ -225,6 +225,26 @@ void main(void)
 
             // draw the filter...
             filterManager.applyFilter(this, input, output);
+
+
+
+
+
+
+            var zoom = window.displacementFilter.uniforms.zoom;
+            var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
+                window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
+
+            bunny.x = (app.renderer.plugins.interaction.mouse.global.x - window.displacementFilter.uniforms.canvasSize[0] / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * zoom * fit);
+            bunny.x += window.displacementFilter.uniforms.pan[0];
+            bunny.x = bunny.x / zoom / fit;
+            bunny.x = bunny.x / window.displacementFilter.uniforms.textureSize[0] * window.displacementFilter.uniforms.canvasSize[0]  ;
+
+            bunny.y = (app.renderer.plugins.interaction.mouse.global.y - window.displacementFilter.uniforms.canvasSize[1] / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * zoom * fit);
+            bunny.y += window.displacementFilter.uniforms.pan[1];
+            bunny.y = bunny.y / zoom / fit;
+            bunny.y = bunny.y / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1] ;
+
         }
 
         const app = new PIXI.Application(
@@ -248,8 +268,14 @@ void main(void)
 
         window.displacementFilter.uniforms.displayMode = 2;
 
-        app.stage.filters = [window.displacementFilter];
-        app.stage.addChild(depthMapImage);
+        var container = new PIXI.Container();
+        var bunny = new PIXI.Sprite(PIXI.Texture.from('https://pixijs.io/examples/examples/assets/bunny.png'));
+        bunny.anchor.set(0.5);
+        container.filters = [window.displacementFilter];
+        app.stage.addChild(container);
+        container.addChild(bunny);
+        container.addChild(depthMapImage);
+        container.addChild(bunny);
 
         var tiltX;
         var tiltY;
@@ -282,7 +308,14 @@ void main(void)
                 alert('You have a strange Mouse!');
             }
 
-            console.log(app.renderer.plugins.interaction.mouse.global.x + '   ' + app.renderer.plugins.interaction.mouse.global.y);
+            var zoom = window.displacementFilter.uniforms.zoom;
+            console.log('pan ' + window.displacementFilter.uniforms.pan[0] + '   ' + window.displacementFilter.uniforms.pan[1]);
+            console.log('zoom ' + zoom);
+
+            var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
+                window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
+            console.log('fit ' + fit);
+
         }
         );
 
@@ -527,6 +560,13 @@ void main(void)
 
             csInterface.evalScript(scriptScale, function (path)  {}
             );
+        }
+
+        function mapToBase(mousePos) {
+            var newPos = {};
+            newPos.x = mousePos.x - window.displacementFilter.uniforms.pan[0];
+            newPos.y = mousePos.y - window.displacementFilter.uniforms.pan[1];
+            return newPos;
         }
     }
     init();
