@@ -4,7 +4,6 @@
 
     function init()
     {
-
         var imageData2;
 
         var curOnTexX = 0;
@@ -24,9 +23,9 @@
         }
         img2.src = path;
 
-        var _texturePixels;
-        var needUpdate = true;
-
+        var reverseMapBuffer;
+        var needUpdateReverseMapBuffer = true;
+        
         PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
 
         PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output)
@@ -47,30 +46,6 @@
 
             // draw the filter...
             filterManager.applyFilter(this, input, output);
-
-
-
-
-
-
-            var zoom = window.displacementFilter.uniforms.zoom;
-            var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
-                window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
-
-
-            var xdiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 ];
-            var xdiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2];
-            var ydiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1];
-            var ydiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3 ];
-
-            bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
-            bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
-
-
-            curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] /window.displacementFilter.uniforms.canvasSize[0];
-            curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] /window.displacementFilter.uniforms.canvasSize[1];
-
-
         }
 
         PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
@@ -104,8 +79,6 @@
 
             // draw the filter...
             filterManager.applyFilter(this, input, output);
-
-
         }
 
         const app = new PIXI.Application(
@@ -183,19 +156,8 @@
                 alert('You have a strange Mouse!');
             }
 
-            var zoom = window.displacementFilter.uniforms.zoom;
-             console.log('pan ' + window.displacementFilter.uniforms.pan[0] + '   ' + window.displacementFilter.uniforms.pan[1]);
-            // console.log('zoom ' + zoom);
-
-            var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
-                 window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
-            // console.log('fit ' + fit);
-
-
             if (imageData2 && imageData2.data) {
                 console.log('curOnTexX: ' + curOnTexX + '  curOnTexY: ' + curOnTexY);
-
-                console.log(imageData2.data[(Math.round(curOnTexY) * window.displacementFilter.uniforms.textureSize[0] + Math.round(curOnTexX) )* 4 ]);
             }
 
         }
@@ -228,12 +190,12 @@
                 {
                     window.displacementFilter.uniforms.zoom *= 1.1;
 
-                    var mx = app.renderer.plugins.interaction.mouse.global.x - app.renderer.width / 2.0;
+                    let mx = app.renderer.plugins.interaction.mouse.global.x - app.renderer.width / 2.0;
                     window.displacementFilter.uniforms.pan[0] += mx;
                     window.displacementFilter.uniforms.pan[0] *= 1.1;
                     window.displacementFilter.uniforms.pan[0] -= mx;
 
-                    var my = app.renderer.plugins.interaction.mouse.global.y - app.renderer.height / 2.0;
+                    let my = app.renderer.plugins.interaction.mouse.global.y - app.renderer.height / 2.0;
                     window.displacementFilter.uniforms.pan[1] += my;
                     window.displacementFilter.uniforms.pan[1] *= 1.1;
                     window.displacementFilter.uniforms.pan[1] -= my;
@@ -244,12 +206,12 @@
             {
                 window.displacementFilter.uniforms.zoom /= 1.1;
 
-                var mx = app.renderer.plugins.interaction.mouse.global.x - app.renderer.width / 2.0;
+                let mx = app.renderer.plugins.interaction.mouse.global.x - app.renderer.width / 2.0;
                 window.displacementFilter.uniforms.pan[0] += mx;
                 window.displacementFilter.uniforms.pan[0] /= 1.1;
                 window.displacementFilter.uniforms.pan[0] -= mx;
 
-                var my = app.renderer.plugins.interaction.mouse.global.y - app.renderer.height / 2.0;
+                let my = app.renderer.plugins.interaction.mouse.global.y - app.renderer.height / 2.0;
                 window.displacementFilter.uniforms.pan[1] += my;
                 window.displacementFilter.uniforms.pan[1] /= 1.1;
                 window.displacementFilter.uniforms.pan[1] -= my;
@@ -264,7 +226,7 @@
             if (depthMapImage && depthMapImage.texture && app.renderer.view.style)
             {
                 if (endx != app.renderer.plugins.interaction.mouse.global.x || endy != app.renderer.plugins.interaction.mouse.global.y) {
-                    needUpdate = true;
+                    needUpdateReverseMapBuffer = true;
                 }
                 endx = app.renderer.plugins.interaction.mouse.global.x;
                 endy = app.renderer.plugins.interaction.mouse.global.y;
@@ -298,10 +260,23 @@
             }
 
 
-            if (needUpdate) {
-                needUpdate = false;
-                _texturePixels = app.renderer.extract.pixels(containerReverseMap);
+            if (needUpdateReverseMapBuffer) {
+                needUpdateReverseMapBuffer = false;
+                reverseMapBuffer = app.renderer.extract.pixels(containerReverseMap);
             }
+            
+            var xdiff =         reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 ];
+            var xdiffExtra =    reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2];
+            var ydiff =         reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1];
+            var ydiffExtra =    reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3 ];
+
+            bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
+            bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
+
+
+            curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] /window.displacementFilter.uniforms.canvasSize[0];
+            curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] /window.displacementFilter.uniforms.canvasSize[1];
+
 
             window.requestAnimationFrame(step);
         }
@@ -328,8 +303,6 @@
         }
 
         resize();
-
-
 
         function changeDisplayMode(mode)
         {
@@ -363,7 +336,7 @@
                 var texture = new PIXI.Texture(baseTexture);
                 depthMapImage.setTexture(texture);
                 depthMapImage2.setTexture(texture);
-                needUpdate = true;
+                needUpdateReverseMapBuffer = true;
 
                 window.displacementFilter.uniforms.textureWidth = depthMapImage.texture.width;
                 window.displacementFilter.uniforms.textureHeight = depthMapImage.texture.height;
@@ -381,8 +354,6 @@
 
         loadBaseImage();
 
-
-
         var currentDepthPngPath = "";
         function updatePreview()
         {
@@ -391,7 +362,6 @@
                 return; // Only generate PNG depth map if matching file name format
             }
 
-            var u = currentDepthPngPath + "?_=" + (new Date().getTime());
             var img = new Image();
             img.onload = function ()
             {
@@ -401,72 +371,6 @@
                 window.offsetFilter.uniforms.displacementMap = texture;
             }
             img.src = './0463_7319_grmdtyheocuc_depth.png';
-        }
-
-        function adjustAllLevels(multiplier, addition)
-        {
-            var reduction = 0.0;
-            if (addition < 0)
-            {
-                reduction = -addition;
-                addition = 0.0;
-            }
-
-            var fromStart = 0 + reduction;
-            var fromEnd = 255 - addition;
-            var toStart = 0 + addition;
-            var toEnd = 255 - reduction;
-
-            if (multiplier > 1.0)
-            {
-                var offset = Math.floor(127.0 / multiplier);
-                fromStart = 127 - offset + reduction;
-                fromEnd = 128 + offset - addition;
-            }
-            else
-            {
-                var offset = Math.floor(127.0 * multiplier);
-                toStart = 127 - offset + addition;
-                toEnd = 128 + offset - reduction;
-            }
-
-            var scriptScale = `
-                var allTopLevelLayers = app.activeDocument.layers;
-                loopLayers(allTopLevelLayers);
-
-                function loopLayers(gp) {
-                    var layer;
-                    for(var i=0; i<gp.length; i++) {
-                        layer = gp[i];
-                        if(layer.typename == 'LayerSet') {
-                            loopLayers(layer.layers);
-                        } else {
-                            changeLayer(layer);
-                        }
-                    }
-                }
-
-                function changeLayer(layer) {
-                    try {
-                        if (layer.visible) {
-                            app.activeDocument.activeLayer = layer;
-                            layer.adjustLevels(${fromStart}, ${fromEnd}, 1.0, ${toStart}, ${toEnd});
-                        }
-                    } catch(e) {
-                        activeDocument.selection.deselect();
-                    }
-                }
-            `;
-
-            csInterface.evalScript(scriptScale, function (path)  {}
-            );
-        }
-
-        function mapToBase(mousePos) {
-            var newPos = {};
-            newPos.x = mousePos.x - window.displacementFilter.uniforms.pan[0];
-            newPos.y = mousePos.y - window.displacementFilter.uniforms.pan[1];
-            return newPos;
         }
     }
 
