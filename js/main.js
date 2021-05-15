@@ -24,6 +24,8 @@
         }
         img2.src = path;
 
+
+
         PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
 
         PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output)
@@ -64,9 +66,41 @@
             curOnTexY = curOnTexY / zoom / fit;
             bunny.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1] ;
 
-            bunnyReverse.x = bunny.x;
-            bunnyReverse.y = bunny.y;
 
+
+        }
+
+        PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
+
+        PIXI.DepthPerspectiveOffsetFilter.apply = function (filterManager, input, output)
+        {
+            if (window.displacementFilter && window.displacementFilter.uniforms) {
+                this.uniforms.dimensions = window.displacementFilter.uniforms.dimensions;
+                this.uniforms.frameWidth = window.displacementFilter.uniforms.frameWidth;
+                this.uniforms.frameHeight = window.displacementFilter.uniforms.frameHeight;
+                this.uniforms.canvasSize = window.displacementFilter.uniforms.canvasSize;
+
+                this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
+                this.padding = window.displacementFilter.padding;
+
+                this.uniforms.pan = window.displacementFilter.uniforms.pan;
+                this.uniforms.scale = window.displacementFilter.uniforms.scale;
+                this.uniforms.focus = window.displacementFilter.uniforms.focus;
+                this.uniforms.offset = window.displacementFilter.uniforms.offset;
+
+                this.uniforms.zoom = window.displacementFilter.uniforms.zoom;
+
+                this.uniforms.textureWidth = window.displacementFilter.uniforms.textureWidth;
+                this.uniforms.textureHeight = window.displacementFilter.uniforms.textureHeight;
+                this.uniforms.textureSize = window.displacementFilter.uniforms.textureSize;
+                this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
+
+                this.uniforms.displacementMap = window.displacementFilter.uniforms.displacementMap;
+            }
+            this.uniforms.displayMode = 3;
+
+            // draw the filter...
+            filterManager.applyFilter(this, input, output);
         }
 
         const app = new PIXI.Application(
@@ -78,6 +112,7 @@
             );
 
         var depthMapImage = new PIXI.Sprite.fromImage("");
+        var depthMapImage2 = new PIXI.Sprite.fromImage("");
 
         window.displacementFilter = PIXI.DepthPerspectiveFilter;
         window.displacementFilter.uniforms.textureScale = 1.0;
@@ -90,16 +125,30 @@
 
         window.displacementFilter.uniforms.displayMode = 2;
 
+
         var container = new PIXI.Container();
         var bunny = new PIXI.Sprite(PIXI.Texture.WHITE);
         var bunnyReverse = new PIXI.Sprite(PIXI.Texture.WHITE);
         bunny.anchor.set(0.5);
         bunnyReverse.anchor.set(0.5);
         container.filters = [window.displacementFilter];
-        app.stage.addChild(container);
         container.addChild(depthMapImage);
         container.addChild(bunny);
+
+
+
+        window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
+
+        var containerReverseMap = new PIXI.Container();
         container.addChild(bunnyReverse);
+        containerReverseMap.filters = [window.offsetFilter];
+        containerReverseMap.addChild(depthMapImage2);
+
+
+
+        app.stage.addChild(containerReverseMap);
+        app.stage.addChild(container);
+
 
         var tiltX;
         var tiltY;
@@ -132,12 +181,12 @@
                 alert('You have a strange Mouse!');
             }
 
-            // var zoom = window.displacementFilter.uniforms.zoom;
-            // console.log('pan ' + window.displacementFilter.uniforms.pan[0] + '   ' + window.displacementFilter.uniforms.pan[1]);
+            var zoom = window.displacementFilter.uniforms.zoom;
+             console.log('pan ' + window.displacementFilter.uniforms.pan[0] + '   ' + window.displacementFilter.uniforms.pan[1]);
             // console.log('zoom ' + zoom);
 
-            // var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
-            //     window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
+            var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
+                 window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
             // console.log('fit ' + fit);
 
 
@@ -147,6 +196,26 @@
                 console.log(imageData2.data[(Math.round(curOnTexY) * window.displacementFilter.uniforms.textureSize[0] + Math.round(curOnTexX) )* 4 ]);
             }
 
+            console.log('pix: ');
+            var _texturePixels = app.renderer.extract.pixels(containerReverseMap);
+            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1] );
+            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 2]);
+            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3]);
+
+            var xdiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 ];
+            var xdiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2];
+
+            var ydiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1];
+            var ydiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3 ];
+
+            console.log(xdiff);
+
+            console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2]);
+            console.log(ydiff);
+            console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 3]);
+
+            bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
+            bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
         }
         );
 
@@ -259,6 +328,9 @@
 
             depthMapImage.width = app.renderer.screen.width;
             depthMapImage.height = app.renderer.screen.height;
+
+            depthMapImage2.width = app.renderer.screen.width;
+            depthMapImage2.height = app.renderer.screen.height;
         }
 
         resize();
@@ -296,6 +368,7 @@
                 var baseTexture = new PIXI.BaseTexture(img);
                 var texture = new PIXI.Texture(baseTexture);
                 depthMapImage.setTexture(texture);
+                depthMapImage2.setTexture(texture);
 
                 window.displacementFilter.uniforms.textureWidth = depthMapImage.texture.width;
                 window.displacementFilter.uniforms.textureHeight = depthMapImage.texture.height;
@@ -330,6 +403,7 @@
                 var baseTexture = new PIXI.BaseTexture(img);
                 var texture = new PIXI.Texture(baseTexture);
                 window.displacementFilter.uniforms.displacementMap = texture;
+                window.offsetFilter.uniforms.displacementMap = texture;
             }
             img.src = './0463_7319_grmdtyheocuc_depth.png';
         }
@@ -471,6 +545,22 @@ vec4 textureDiffuseNoBg(vec2 coord)
 }
 
 
+vec2 textureDiffuseCoor(vec2 coord)
+{
+    vec2 c = coord;
+    vec2 scale = textureSize * ( min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]) );
+
+    c -= 0.5;                   // Normalize
+    c = c * canvasSize + pan;   // Convert to pixel count, where origin is the center
+    c /= scale;
+
+    c /= zoom;
+    c += 0.5;                   // Unnormalize
+
+    return c;
+}
+
+
 vec4 textureDiffuse(vec2 coord)
 {
     vec4 withoutBg = textureDiffuseNoBg(coord);
@@ -595,9 +685,14 @@ void main(void)
     {
         gl_FragColor = normal(coord);
     }
-    else
+    else if (displayMode == 2)
     {
         gl_FragColor = normalMixed(coord);
+    }
+    else 
+    {
+        vec2 originCoor = textureDiffuseCoor(coord);
+        gl_FragColor = vec4(originCoor[0] ,originCoor[1], originCoor[0] * 256.0  - floor(originCoor[0] * 256.0) , originCoor[1] * 256.0  - floor(originCoor[1] * 256.0));
     }
 
 }`;
