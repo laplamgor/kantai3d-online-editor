@@ -24,7 +24,8 @@
         }
         img2.src = path;
 
-
+        var _texturePixels;
+        var needUpdate = true;
 
         PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
 
@@ -56,16 +57,18 @@
             var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
                 window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
 
-            curOnTexX = (app.renderer.plugins.interaction.mouse.global.x - window.displacementFilter.uniforms.canvasSize[0] / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * zoom * fit);
-            curOnTexX += window.displacementFilter.uniforms.pan[0];
-            curOnTexX = curOnTexX / zoom / fit;
-            bunny.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * window.displacementFilter.uniforms.canvasSize[0]  ;
 
-            curOnTexY = (app.renderer.plugins.interaction.mouse.global.y - window.displacementFilter.uniforms.canvasSize[1] / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * zoom * fit);
-            curOnTexY += window.displacementFilter.uniforms.pan[1];
-            curOnTexY = curOnTexY / zoom / fit;
-            bunny.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1] ;
+            var xdiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 ];
+            var xdiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2];
+            var ydiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1];
+            var ydiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3 ];
 
+            bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
+            bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
+
+
+            curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] /window.displacementFilter.uniforms.canvasSize[0];
+            curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] /window.displacementFilter.uniforms.canvasSize[1];
 
 
         }
@@ -101,6 +104,8 @@
 
             // draw the filter...
             filterManager.applyFilter(this, input, output);
+
+
         }
 
         const app = new PIXI.Application(
@@ -109,7 +114,7 @@
                 width: 50,
                 height: 50
             }
-            );
+        );
 
         var depthMapImage = new PIXI.Sprite.fromImage("");
         var depthMapImage2 = new PIXI.Sprite.fromImage("");
@@ -127,13 +132,10 @@
 
 
         var container = new PIXI.Container();
-        var bunny = new PIXI.Sprite(PIXI.Texture.WHITE);
         var bunnyReverse = new PIXI.Sprite(PIXI.Texture.WHITE);
-        bunny.anchor.set(0.5);
         bunnyReverse.anchor.set(0.5);
         container.filters = [window.displacementFilter];
         container.addChild(depthMapImage);
-        container.addChild(bunny);
 
 
 
@@ -196,26 +198,6 @@
                 console.log(imageData2.data[(Math.round(curOnTexY) * window.displacementFilter.uniforms.textureSize[0] + Math.round(curOnTexX) )* 4 ]);
             }
 
-            console.log('pix: ');
-            var _texturePixels = app.renderer.extract.pixels(containerReverseMap);
-            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1] );
-            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 2]);
-            // console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3]);
-
-            var xdiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 ];
-            var xdiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2];
-
-            var ydiff =         _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 1];
-            var ydiffExtra =    _texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4 + 3 ];
-
-            console.log(xdiff);
-
-            console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 2]);
-            console.log(ydiff);
-            console.log(_texturePixels[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x) ) * 4  + 3]);
-
-            bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
-            bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
         }
         );
 
@@ -275,12 +257,17 @@
         }
         );
 
+        var endx = 0;
+        var endy = 0;
         function step(timestamp)
         {
             if (depthMapImage && depthMapImage.texture && app.renderer.view.style)
             {
-                var endx = app.renderer.plugins.interaction.mouse.global.x;
-                var endy = app.renderer.plugins.interaction.mouse.global.y;
+                if (endx != app.renderer.plugins.interaction.mouse.global.x || endy != app.renderer.plugins.interaction.mouse.global.y) {
+                    needUpdate = true;
+                }
+                endx = app.renderer.plugins.interaction.mouse.global.x;
+                endy = app.renderer.plugins.interaction.mouse.global.y;
 
                 if (isTilting)
                 {
@@ -309,6 +296,13 @@
                 }
 
             }
+
+
+            if (needUpdate) {
+                needUpdate = false;
+                _texturePixels = app.renderer.extract.pixels(containerReverseMap);
+            }
+
             window.requestAnimationFrame(step);
         }
 
@@ -369,6 +363,7 @@
                 var texture = new PIXI.Texture(baseTexture);
                 depthMapImage.setTexture(texture);
                 depthMapImage2.setTexture(texture);
+                needUpdate = true;
 
                 window.displacementFilter.uniforms.textureWidth = depthMapImage.texture.width;
                 window.displacementFilter.uniforms.textureHeight = depthMapImage.texture.height;
