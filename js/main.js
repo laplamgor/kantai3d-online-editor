@@ -26,10 +26,7 @@
     PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
-      if (input && input.sourceFrame && input.size) {
-        this.uniforms.dimensions[0] = input.sourceFrame.width;
-        this.uniforms.dimensions[1] = input.sourceFrame.height;
-
+      if (input && input.size) {
         this.uniforms.frameWidth = input.size.width;
         this.uniforms.frameHeight = input.size.height;
       }
@@ -45,10 +42,9 @@
     PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
     PIXI.DepthPerspectiveOffsetFilter.apply = function (filterManager, input, output) {
       if (window.displacementFilter && window.displacementFilter.uniforms) {
-        this.uniforms.dimensions = window.displacementFilter.uniforms.dimensions;
         this.uniforms.frameWidth = window.displacementFilter.uniforms.frameWidth;
         this.uniforms.frameHeight = window.displacementFilter.uniforms.frameHeight;
-        this.uniforms.canvasSize = window.displacementFilter.uniforms.canvasSize;
+        this.uniforms.canvasSize = [app.renderer.width, app.renderer.height];
 
         this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
         this.padding = window.displacementFilter.padding;
@@ -62,7 +58,7 @@
 
         this.uniforms.textureWidth = window.displacementFilter.uniforms.textureWidth;
         this.uniforms.textureHeight = window.displacementFilter.uniforms.textureHeight;
-        this.uniforms.textureSize = window.displacementFilter.uniforms.textureSize;
+        this.uniforms.textureSize = [this.uniforms.textureWidth, this.uniforms.textureHeight];
         this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
 
         this.uniforms.displacementMap = window.displacementFilter.uniforms.displacementMap;
