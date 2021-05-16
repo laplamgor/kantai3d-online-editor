@@ -84,7 +84,6 @@
 
     var depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     var depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
-    var depthMapImage3 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
@@ -115,8 +114,7 @@
 
 
 
-    container.addChild(depthMapImage3);
-    // app.stage.addChild(containerReverseMap);
+    app.stage.addChild(containerReverseMap);
     app.stage.addChild(container);
 
 
@@ -326,9 +324,8 @@
       img2.onload = function () {
         var baseTexture2 = new PIXI.BaseTexture(img2);
         var texture2 = new PIXI.Texture(baseTexture2);
-        depthMapImage3.texture = texture2;
-        window.displacementFilter.uniforms.displacementMap = depthMapImage3._texture;
-        window.offsetFilter.uniforms.displacementMap = depthMapImage3._texture;
+        window.displacementFilter.uniforms.displacementMap = texture2;
+        window.offsetFilter.uniforms.displacementMap = texture2;
       }
       img2.src = './0463_7319_grmdtyheocuc_depth.png';
     }
@@ -549,7 +546,7 @@ void main(void)
     else 
     {
         vec2 originCoor = textureDiffuseCoor(coord);
-        gl_FragColor = vec4(originCoor[0] ,originCoor[1], originCoor[0] * 256.0  - floor(originCoor[0] * 256.0) , originCoor[1] * 256.0  - floor(originCoor[1] * 256.0));
+        gl_FragColor = vec4(originCoor[0] ,originCoor[1],1.0,1.0);
     }
 
 }`;
