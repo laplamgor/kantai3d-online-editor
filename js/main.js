@@ -81,8 +81,8 @@
       }
     );
 
-    var depthMapImage = new PIXI.Sprite.fromImage("");
-    var depthMapImage2 = new PIXI.Sprite.fromImage("");
+    var depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    var depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
@@ -126,45 +126,35 @@
     var isPanning = false;
 
     window.addEventListener('mousedown', function (event) {
-      switch (event.which) {
-        case 1:
+      switch (event.button) {
+        case 2:
           tiltX = app.renderer.plugins.interaction.mouse.global.x;
           tiltY = app.renderer.plugins.interaction.mouse.global.y;
           console.log('case 1:!');
           isTilting = true;
           break;
-        case 2:
+        case 1:
           panX = app.renderer.plugins.interaction.mouse.global.x;
           panY = app.renderer.plugins.interaction.mouse.global.y;
           console.log('case 2:!');
           isPanning = true;
           break;
-        case 3:
-          console.log('case 3:!');
-          break;
-        default:
-          alert('You have a strange Mouse!');
       }
 
       if (imageData2 && imageData2.data) {
         console.log('curOnTexX: ' + curOnTexX + '  curOnTexY: ' + curOnTexY);
       }
-
     }
     );
 
     window.addEventListener('mouseup', function (event) {
-      switch (event.which) {
-        case 1:
+      switch (event.button) {
+        case 2:
           isTilting = false;
           break;
-        case 2:
+        case 1:
           isPanning = false;
           break;
-        case 3:
-          break;
-        default:
-          alert('You have a strange Mouse!');
       }
     }
     );
@@ -244,18 +234,20 @@
         reverseMapBuffer = app.renderer.extract.pixels(containerReverseMap);
       }
 
-      var xdiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4];
-      var xdiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
-      var ydiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
-      var ydiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
-
-      bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
-      bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
-
-
-      curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] / window.displacementFilter.uniforms.canvasSize[0];
-      curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] / window.displacementFilter.uniforms.canvasSize[1];
-
+      if (window.displacementFilter.uniforms && window.displacementFilter.uniforms.canvasSize && window.displacementFilter.uniforms.textureSize) {
+        var xdiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4];
+        var xdiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
+        var ydiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
+        var ydiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
+  
+        bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
+        bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
+  
+  
+        curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] / window.displacementFilter.uniforms.canvasSize[0];
+        curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] / window.displacementFilter.uniforms.canvasSize[1];
+  
+      }
 
       window.requestAnimationFrame(step);
     }
@@ -307,8 +299,8 @@
       img.onload = function () {
         var baseTexture = new PIXI.BaseTexture(img);
         var texture = new PIXI.Texture(baseTexture);
-        depthMapImage.setTexture(texture);
-        depthMapImage2.setTexture(texture);
+        depthMapImage.texture = texture;
+        depthMapImage2.texture = texture;
         needUpdateReverseMapBuffer = true;
 
         window.displacementFilter.uniforms.textureWidth = depthMapImage.texture.width;
