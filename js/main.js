@@ -23,7 +23,13 @@
     var reverseMapBuffer;
     var needUpdateReverseMapBuffer = true;
 
-    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
+    if (PIXI.VERSION[0] === '4') {
+      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
+      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
+    } else {
+      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, {displacementMap: PIXI.Texture.EMPTY});
+      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, {displacementMap: PIXI.Texture.EMPTY});
+    }
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
       if (input && input.size) {
@@ -39,7 +45,6 @@
       filterManager.applyFilter(this, input, output);
     }
 
-    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
     PIXI.DepthPerspectiveOffsetFilter.apply = function (filterManager, input, output) {
       if (window.displacementFilter && window.displacementFilter.uniforms) {
         this.uniforms.frameWidth = window.displacementFilter.uniforms.frameWidth;
@@ -61,7 +66,7 @@
         this.uniforms.textureSize = [this.uniforms.textureWidth, this.uniforms.textureHeight];
         this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
 
-        this.uniforms.displacementMap = window.displacementFilter.uniforms.displacementMap;
+        // this.uniforms.displacementMap = window.displacementFilter.uniforms.displacementMap;
       }
       this.uniforms.displayMode = 3;
 
@@ -79,6 +84,7 @@
 
     var depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     var depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    var depthMapImage3 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
@@ -109,7 +115,8 @@
 
 
 
-    app.stage.addChild(containerReverseMap);
+    container.addChild(depthMapImage3);
+    // app.stage.addChild(containerReverseMap);
     app.stage.addChild(container);
 
 
@@ -309,26 +316,21 @@
       }
       img.src = url;
 
-      currentDepthPngPath = path.replace('.psd', '.png');
       updatePreview();
     }
 
     loadBaseImage();
 
-    var currentDepthPngPath = "";
     function updatePreview() {
-      if (currentDepthPngPath.toLowerCase().indexOf("_depth.png") === -1) {
-        return; // Only generate PNG depth map if matching file name format
+      var img2 = new Image();
+      img2.onload = function () {
+        var baseTexture2 = new PIXI.BaseTexture(img2);
+        var texture2 = new PIXI.Texture(baseTexture2);
+        depthMapImage3.texture = texture2;
+        window.displacementFilter.uniforms.displacementMap = depthMapImage3._texture;
+        window.offsetFilter.uniforms.displacementMap = depthMapImage3._texture;
       }
-
-      var img = new Image();
-      img.onload = function () {
-        var baseTexture = new PIXI.BaseTexture(img);
-        var texture = new PIXI.Texture(baseTexture);
-        window.displacementFilter.uniforms.displacementMap = texture;
-        window.offsetFilter.uniforms.displacementMap = texture;
-      }
-      img.src = './0463_7319_grmdtyheocuc_depth.png';
+      img2.src = './0463_7319_grmdtyheocuc_depth.png';
     }
   }
 
