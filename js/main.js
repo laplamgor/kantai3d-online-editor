@@ -499,8 +499,9 @@ vec4 textureDepth(vec2 coord)
 
 vec4 normal(vec2 coord)
 {
-    vec2 lineW = vec2(0.5 / frameWidth, 0.0);
-    vec2 lineH = vec2(0.0, 0.5 / frameHeight);
+    float fit = min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]);
+    vec2 lineW = vec2(0.0005 * fit * zoom, 0.0);
+    vec2 lineH = vec2(0.0, 0.0005 * fit * zoom);
 
 
     float leftD = textureDepth(coord - lineW).r;
@@ -513,7 +514,7 @@ vec4 normal(vec2 coord)
         return vec4(0.5, 0.5, 1.0, 1.0);
     }
 
-    return vec4(0.5, 0.5, 1.0, 1.0) + vec4(leftD - rightD, upD - downD, 0.0, 0.0) * 100.0 * zoom;
+    return vec4(0.5, 0.5, 1.0, 1.0) + vec4(leftD - rightD, upD - downD, 0.0, 0.0) * 100.0  ;
 }
 
 vec4 normalMixed(vec2 coord)
