@@ -2,34 +2,56 @@
   'use strict';
 
   function init() {
-    var imageData2;
 
     var curOnTexX = 0;
     var curOnTexY = 0;
 
-    // Get texture data as buffer
-    var path = './0463_7319_grmdtyheocuc_depth.png';
-    var img2 = new Image();
-    img2.onload = function () {
-      var tempCanvas = document.createElement("CANVAS");;
-      tempCanvas.width = img2.width;
-      tempCanvas.height = img2.height;
+    // Load base map as buffer
+    var bmImageData;
+    var bmPath = './0463_7319_grmdtyheocuc.png';
+    var bmImage = new Image();
+    bmImage.onload = function () {
+      let tempCanvas = document.createElement("CANVAS");;
+      tempCanvas.width = bmImage.width;
+      tempCanvas.height = bmImage.height;
       const ctx = tempCanvas.getContext('2d');
-      ctx.drawImage(img2, 0, 0);
-      imageData2 = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      ctx.drawImage(bmImage, 0, 0);
+      bmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+      let texture = PIXI.Texture.fromBuffer(bmImageData.data, bmImage.width, bmImage.height);
+      depthMapImage.texture = texture;
+      depthMapImage2.texture = texture;
+      needUpdateReverseMapBuffer = true;
+
+      window.displacementFilter.uniforms.textureWidth = bmImage.width;
+      window.displacementFilter.uniforms.textureHeight = bmImage.height;
+      window.displacementFilter.uniforms.textureSize = [bmImage.width, bmImage.height];
+      window.displacementFilter.uniforms.textureScale = 1.0;
     }
-    img2.src = path;
+    bmImage.src = bmPath;
+
+
+    // Load depth map as buffer
+    var dmImageData;
+    var dmPath = './0463_7319_grmdtyheocuc_depth.png';
+    var dmImage = new Image();
+    dmImage.onload = function () {
+      let tempCanvas = document.createElement("CANVAS");;
+      tempCanvas.width = dmImage.width;
+      tempCanvas.height = dmImage.height;
+      const ctx = tempCanvas.getContext('2d');
+      ctx.drawImage(dmImage, 0, 0);
+      dmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    }
+    dmImage.src = dmPath;
+
+
 
     var reverseMapBuffer;
     var needUpdateReverseMapBuffer = true;
 
-    if (PIXI.VERSION[0] === '4') {
-      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
-      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
-    } else {
-      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
-      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
-    }
+    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
+    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
       if (input && input.size) {
@@ -142,7 +164,7 @@
           break;
       }
 
-      if (imageData2 && imageData2.data) {
+      if (dmImageData && dmImageData.data) {
         console.log('curOnTexX: ' + curOnTexX + '  curOnTexY: ' + curOnTexY);
       }
     }
@@ -288,36 +310,8 @@
       }
     }
 
-    // Load the image as the default
-    function loadBaseImage() {
-      var path = './0463_7319_grmdtyheocuc_depth.psd';
 
-      if (path.toLowerCase().indexOf("_depth.psd") === -1) {
-        return; // Only generate PNG depth map if matching file name format
-      }
-      var url = path.replace('_depth', '').replace('.psd', '.png') + "?_=" + (new Date().getTime());
-      var img = new Image();
-      img.onload = function () {
-        var baseTexture = new PIXI.BaseTexture(img);
-        var texture = new PIXI.Texture(baseTexture);
-        depthMapImage.texture = texture;
-        depthMapImage2.texture = texture;
-        needUpdateReverseMapBuffer = true;
-
-        window.displacementFilter.uniforms.textureWidth = depthMapImage.texture.width;
-        window.displacementFilter.uniforms.textureHeight = depthMapImage.texture.height;
-
-        window.displacementFilter.uniforms.textureSize = [depthMapImage.texture.width, depthMapImage.texture.height];
-
-        window.displacementFilter.uniforms.textureScale = 1.0;
-
-      }
-      img.src = url;
-
-      updatePreview();
-    }
-
-    loadBaseImage();
+    updatePreview();
 
     function updatePreview() {
       var img2 = new Image();
@@ -332,10 +326,6 @@
 
     // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
     function extractPixelsWithoutPostmultiply(target) {
-      if (PIXI.VERSION[0] === '4') {
-        // Do not need this workaround in V4
-        return app.renderer.extract.pixels(target);
-      }
       let BYTES_PER_PIXEL = 4;
       const renderer = app.renderer;
       let resolution;
