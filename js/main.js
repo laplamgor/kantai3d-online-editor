@@ -2,6 +2,13 @@
   'use strict';
 
   function init() {
+    const app = new PIXI.Application(
+      {
+        view: document.querySelector("#canvas"),
+        width: 50,
+        height: 50
+      }
+    );
 
     var curOnTexX = 0;
     var curOnTexY = 0;
@@ -35,6 +42,7 @@
     var dmImageData;
     var dmPath = './0463_7319_grmdtyheocuc_depth.png';
     var dmImage = new Image();
+    let dmTexture = PIXI.Texture.EMPTY;
     dmImage.onload = function () {
       let tempCanvas = document.createElement("CANVAS");;
       tempCanvas.width = dmImage.width;
@@ -42,6 +50,10 @@
       const ctx = tempCanvas.getContext('2d');
       ctx.drawImage(dmImage, 0, 0);
       dmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+      dmTexture = PIXI.Texture.fromBuffer(dmImageData.data, dmImage.width, dmImage.height);
+      window.displacementFilter.uniforms.displacementMap = dmTexture;
+      window.offsetFilter.uniforms.displacementMap = dmTexture;
     }
     dmImage.src = dmPath;
 
@@ -87,22 +99,12 @@
         this.uniforms.textureHeight = window.displacementFilter.uniforms.textureHeight;
         this.uniforms.textureSize = [this.uniforms.textureWidth, this.uniforms.textureHeight];
         this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
-
-        // this.uniforms.displacementMap = window.displacementFilter.uniforms.displacementMap;
       }
       this.uniforms.displayMode = 3;
 
       // draw the filter...
       filterManager.applyFilter(this, input, output);
     }
-
-    const app = new PIXI.Application(
-      {
-        view: document.querySelector("#canvas"),
-        width: 50,
-        height: 50
-      }
-    );
 
     var depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     var depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
@@ -161,6 +163,9 @@
           panY = app.renderer.plugins.interaction.mouse.global.y;
           console.log('case 2:!');
           isPanning = true;
+          break;
+        case 0:
+          drawBrush();
           break;
       }
 
@@ -310,18 +315,12 @@
       }
     }
 
-
-    updatePreview();
-
-    function updatePreview() {
-      var img2 = new Image();
-      img2.onload = function () {
-        var baseTexture2 = new PIXI.BaseTexture(img2);
-        var texture2 = new PIXI.Texture(baseTexture2);
-        window.displacementFilter.uniforms.displacementMap = texture2;
-        window.offsetFilter.uniforms.displacementMap = texture2;
-      }
-      img2.src = './0463_7319_grmdtyheocuc_depth.png';
+    function drawBrush() {
+      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4] = 255;
+      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 1] = 255;
+      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 2] = 255;
+      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 3] = 255;
+      dmTexture.update();
     }
 
     // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
@@ -606,9 +605,7 @@ void main(void)
 
 }`;
 
-
   init();
-}
-  ());
+}());
 
 
