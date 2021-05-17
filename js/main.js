@@ -27,8 +27,8 @@
       PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag);
       PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag);
     } else {
-      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, {displacementMap: PIXI.Texture.EMPTY});
-      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, {displacementMap: PIXI.Texture.EMPTY});
+      PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
+      PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
     }
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
@@ -232,7 +232,7 @@
 
       if (needUpdateReverseMapBuffer) {
         needUpdateReverseMapBuffer = false;
-        reverseMapBuffer = app.renderer.extract.pixels(containerReverseMap);
+        reverseMapBuffer = extractPixelsWithoutPostmultiply(containerReverseMap);
       }
 
       if (window.displacementFilter.uniforms && window.displacementFilter.uniforms.canvasSize && window.displacementFilter.uniforms.textureSize) {
@@ -240,14 +240,14 @@
         var xdiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
         var ydiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
         var ydiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
-  
+
         bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
         bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
-  
-  
+
+
         curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] / window.displacementFilter.uniforms.canvasSize[0];
         curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] / window.displacementFilter.uniforms.canvasSize[1];
-  
+
       }
 
       window.requestAnimationFrame(step);
@@ -328,6 +328,71 @@
         window.offsetFilter.uniforms.displacementMap = texture2;
       }
       img2.src = './0463_7319_grmdtyheocuc_depth.png';
+    }
+
+    // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
+    function extractPixelsWithoutPostmultiply(target) {
+      if (PIXI.VERSION[0] === '4') {
+        // Do not need this workaround in V4
+        return app.renderer.extract.pixels(target);
+      }
+      let BYTES_PER_PIXEL = 4;
+      const renderer = app.renderer;
+      let resolution;
+      let frame;
+      let renderTexture;
+      let generated = false;
+
+      if (target) {
+        if (target instanceof PIXI.RenderTexture) {
+          renderTexture = target;
+        }
+        else {
+          renderTexture = renderer.generateTexture(target);
+          generated = true;
+        }
+      }
+
+      if (renderTexture) {
+        resolution = renderTexture.baseTexture.resolution;
+        frame = renderTexture.frame;
+
+        // bind the buffer
+        renderer.renderTexture.bind(renderTexture);
+      }
+      else {
+        resolution = renderer.resolution;
+
+        frame = TEMP_RECT;
+        frame.width = renderer.width;
+        frame.height = renderer.height;
+
+        renderer.renderTexture.bind(null);
+      }
+
+      const width = frame.width * resolution;
+      const height = frame.height * resolution;
+
+      const webglPixels = new Uint8Array(BYTES_PER_PIXEL * width * height);
+
+      // read pixels to the array
+      const gl = renderer.gl;
+
+      gl.readPixels(
+        frame.x * resolution,
+        frame.y * resolution,
+        width,
+        height,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        webglPixels
+      );
+
+      if (generated) {
+        renderTexture.destroy(true);
+      }
+
+      return webglPixels;
     }
   }
 
