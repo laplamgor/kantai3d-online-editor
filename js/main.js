@@ -150,6 +150,7 @@
     var panY;
     var isPanning = false;
 
+    let r, g, b ,a;
     window.addEventListener('mousedown', function (event) {
       switch (event.button) {
         case 2:
@@ -170,7 +171,8 @@
       }
 
       if (dmImageData && dmImageData.data) {
-        console.log('curOnTexX: ' + curOnTexX + '  curOnTexY: ' + curOnTexY);
+        console.log('r: ' + r + '  g: ' + g);
+        console.log('b: ' + b + '  a: ' + a);
       }
     }
     );
@@ -263,18 +265,30 @@
       }
 
       if (window.displacementFilter.uniforms && window.displacementFilter.uniforms.canvasSize && window.displacementFilter.uniforms.textureSize) {
-        var xdiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4];
-        var xdiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
-        var ydiff = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
-        var ydiffExtra = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
-
-        bunnyReverse.x = (xdiff / 256.0 + xdiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[0];
-        bunnyReverse.y = (ydiff / 256.0 + ydiffExtra / 65536) * window.displacementFilter.uniforms.canvasSize[1];
+        r = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4];
+        g = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
+        b = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
+        a = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
 
 
-        curOnTexX = bunnyReverse.x * window.displacementFilter.uniforms.textureSize[0] / window.displacementFilter.uniforms.canvasSize[0];
-        curOnTexY = bunnyReverse.y * window.displacementFilter.uniforms.textureSize[1] / window.displacementFilter.uniforms.canvasSize[1];
 
+
+
+        var zoom = window.displacementFilter.uniforms.zoom;
+        var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
+            window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
+        let mouseX = (app.renderer.plugins.interaction.mouse.global.x - window.displacementFilter.uniforms.canvasSize[0] / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * zoom * fit);
+        mouseX += window.displacementFilter.uniforms.pan[0];
+        mouseX = mouseX / zoom / fit;
+        curOnTexX = mouseX + ((r - 128. + (b - 128.) / 256.) / 256. ) * window.displacementFilter.uniforms.textureSize[0];
+
+        let mouseY = (app.renderer.plugins.interaction.mouse.global.y - window.displacementFilter.uniforms.canvasSize[1] / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * zoom * fit);
+        mouseY += window.displacementFilter.uniforms.pan[1];
+        mouseY = mouseY / zoom / fit;
+        curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256. )* window.displacementFilter.uniforms.textureSize[1];
+
+        bunnyReverse.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * window.displacementFilter.uniforms.canvasSize[0];
+        bunnyReverse.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1];
       }
 
       window.requestAnimationFrame(step);
@@ -600,8 +614,12 @@ void main(void)
     }
     else 
     {
-        vec2 originCoor = textureDiffuseCoor(coord);
-        gl_FragColor = vec4(originCoor[0] ,originCoor[1],1.0,1.0);
+        vec2 originCoor = (textureDiffuseCoor(coord) - textureDiffuseCoor(pos)) + 0.5;
+        gl_FragColor = vec4(
+          1. / 256. * floor(originCoor[0] * 256.0 + 0.5),
+          1. / 256. * floor(originCoor[1] * 256.0 + 0.5),
+          256. * (originCoor[0]  - (1. / 256. * floor(originCoor[0] * 256.0 + 0.5))), 
+          256. * (originCoor[1]  - (1. / 256. * floor(originCoor[1] * 256.0 + 0.5))));
     }
 
 }`;
