@@ -619,8 +619,8 @@ void main(void)
         gl_FragColor = vec4(
           1. / 256. * floor(originCoor[0] * 256.0 + 0.5),
           1. / 256. * floor(originCoor[1] * 256.0 + 0.5),
-          256. * (originCoor[0]  - (1. / 256. * floor(originCoor[0] * 256.0 + 0.5))), 
-          256. * (originCoor[1]  - (1. / 256. * floor(originCoor[1] * 256.0 + 0.5))));
+          0.5 + 256. * (originCoor[0]  - (1. / 256. * floor(originCoor[0] * 256.0 + 0.5))), 
+          0.5 + 256. * (originCoor[1]  - (1. / 256. * floor(originCoor[1] * 256.0 + 0.5))));
     }
 
 }`;
