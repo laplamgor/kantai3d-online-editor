@@ -151,6 +151,8 @@
     var panY;
     var isPanning = false;
 
+    var isDrawing = false;
+
     let r, g, b, a;
     window.addEventListener('mousedown', function (event) {
       switch (event.button) {
@@ -167,7 +169,7 @@
           isPanning = true;
           break;
         case 0:
-          drawBrush();
+          isDrawing = true;
           break;
       }
 
@@ -183,6 +185,9 @@
           break;
         case 1:
           isPanning = false;
+          break;
+        case 0:
+          isDrawing = false;
           break;
       }
     }
@@ -254,6 +259,8 @@
           panX = endx;
           panY = endy;
         }
+
+        handleMouseMove(isDrawing);
 
       }
 
@@ -334,17 +341,45 @@
     var brushImage = new Image();
     brushImage.src = brushPath;
 
-    function drawBrush() {
 
-      let x = curOnTexX;
-      let y = curOnTexY;
 
-      // Draw brush
-      dmCtx.globalAlpha = 0.02;
-      dmCtx.drawImage(brushImage, x - brushImage.width / 2, y - brushImage.height / 2);
+    let lastPoint = { x: -1, y: -1 };
+    function handleMouseMove(isDrawing) {
 
-      dmTexture.update();
+      let currentPoint = { x: curOnTexX, y: curOnTexY };
+      if (isDrawing && currentPoint.x != lastPoint.x || currentPoint.y != lastPoint.y) {
+        drawLine(lastPoint, currentPoint)
+
+        dmTexture.update();
+      }
+      lastPoint = currentPoint;
     }
+
+    function drawLine(startPoint, endPoint) {
+      if (!isDrawing) return;
+
+      let dist = distanceBetween(startPoint, endPoint);
+      let angle = angleBetween(startPoint, endPoint);
+
+      for (var i = 0; i < dist; i += 5) {
+        drawBrush({ x: startPoint.x + (Math.sin(angle) * i), y: startPoint.y + (Math.cos(angle) * i) })
+      }
+    }
+
+    function drawBrush(point) {
+      // Draw brush
+      dmCtx.globalAlpha = 0.005;
+      dmCtx.drawImage(brushImage, point.x - brushImage.width / 2, point.y - brushImage.height / 2);
+    }
+
+
+    function distanceBetween(point1, point2) {
+      return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+    }
+    function angleBetween(point1, point2) {
+      return Math.atan2(point2.x - point1.x, point2.y - point1.y);
+    }
+
 
     // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
     function extractPixelsWithoutPostmultiply(target) {
