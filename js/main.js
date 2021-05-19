@@ -40,19 +40,19 @@
 
 
     // Load depth map as buffer
-    var dmImageData;
+    let dmCanvas;
+    let dmCtx;
     var dmPath = './0463_7319_grmdtyheocuc_depth.png';
     var dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
     dmImage.onload = function () {
-      let tempCanvas = document.createElement("CANVAS");;
-      tempCanvas.width = dmImage.width;
-      tempCanvas.height = dmImage.height;
-      const ctx = tempCanvas.getContext('2d');
-      ctx.drawImage(dmImage, 0, 0);
-      dmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      dmCanvas = document.createElement("CANVAS");
+      dmCanvas.width = dmImage.width;
+      dmCanvas.height = dmImage.height;
+      dmCtx = dmCanvas.getContext('2d');
+      dmCtx.drawImage(dmImage, 0, 0);
 
-      dmTexture = PIXI.Texture.fromBuffer(dmImageData.data, dmImage.width, dmImage.height);
+      dmTexture = PIXI.Texture.fromCanvas(dmCanvas);
       window.displacementFilter.uniforms.displacementMap = dmTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
     }
@@ -151,7 +151,7 @@
     var panY;
     var isPanning = false;
 
-    let r, g, b ,a;
+    let r, g, b, a;
     window.addEventListener('mousedown', function (event) {
       switch (event.button) {
         case 2:
@@ -171,10 +171,8 @@
           break;
       }
 
-      if (dmImageData && dmImageData.data) {
-        console.log('r: ' + r + '  g: ' + g);
-        console.log('b: ' + b + '  a: ' + a);
-      }
+      console.log('r: ' + r + '  g: ' + g);
+      console.log('b: ' + b + '  a: ' + a);
     }
     );
 
@@ -276,17 +274,17 @@
 
 
         var zoom = window.displacementFilter.uniforms.zoom;
-        var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0], 
-            window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
+        var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0],
+          window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
         let mouseX = (app.renderer.plugins.interaction.mouse.global.x - window.displacementFilter.uniforms.canvasSize[0] / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * zoom * fit);
         mouseX += window.displacementFilter.uniforms.pan[0];
         mouseX = mouseX / zoom / fit;
-        curOnTexX = mouseX + ((r - 128. + (b - 128.) / 256.) / 256. ) * window.displacementFilter.uniforms.textureSize[0];
+        curOnTexX = mouseX + ((r - 128. + (b - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[0];
 
         let mouseY = (app.renderer.plugins.interaction.mouse.global.y - window.displacementFilter.uniforms.canvasSize[1] / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * zoom * fit);
         mouseY += window.displacementFilter.uniforms.pan[1];
         mouseY = mouseY / zoom / fit;
-        curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256. )* window.displacementFilter.uniforms.textureSize[1];
+        curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[1];
 
         bunnyReverse.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * window.displacementFilter.uniforms.canvasSize[0];
         bunnyReverse.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1];
@@ -330,11 +328,21 @@
       }
     }
 
+
+    // Load brush
+    var brushPath = './HsbVA.png';
+    var brushImage = new Image();
+    brushImage.src = brushPath;
+
     function drawBrush() {
-      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4] = 255;
-      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 1] = 255;
-      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 2] = 255;
-      dmImageData.data[ (Math.floor(curOnTexY)  * dmTexture.width + Math.floor(curOnTexX)) * 4 + 3] = 255;
+
+      let x = curOnTexX;
+      let y = curOnTexY;
+
+      // Draw brush
+      dmCtx.globalAlpha = 0.02;
+      dmCtx.drawImage(brushImage, x - brushImage.width / 2, y - brushImage.height / 2);
+
       dmTexture.update();
     }
 
