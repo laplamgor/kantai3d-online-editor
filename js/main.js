@@ -260,7 +260,7 @@
           panY = endy;
         }
 
-        handleMouseMove(isDrawing);
+        handleMouseMove();
 
       }
 
@@ -341,43 +341,89 @@
     var brushImage = new Image();
     brushImage.src = brushPath;
 
+    let currentStroke = [];
 
+    function handleMouseMove() {
+      let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
+      if (isDrawing &&
+        (currentStroke.length == 0 ||
+          currentPoint.x != currentStroke[currentStroke.length - 1].x ||
+          currentPoint.y != currentStroke[currentStroke.length - 1].y)) {
+        // It is the first point or new point
 
-    let lastPoint = { x: -1, y: -1 };
-    function handleMouseMove(isDrawing) {
+        currentStroke.push(currentPoint);
 
-      let currentPoint = { x: curOnTexX, y: curOnTexY };
-      if (isDrawing && currentPoint.x != lastPoint.x || currentPoint.y != lastPoint.y) {
-        drawLine(lastPoint, currentPoint)
+        dmCtx.globalAlpha = 1;
+        dmCtx.globalCompositeOperation = 'source-over';
+        dmCtx.drawImage(dmImage, 0, 0);
+        drawSmoothLine(currentStroke, 50, 0, 180, true)
 
         dmTexture.update();
       }
-      lastPoint = currentPoint;
-    }
 
-    function drawLine(startPoint, endPoint) {
-      if (!isDrawing) return;
-
-      let dist = distanceBetween(startPoint, endPoint);
-      let angle = angleBetween(startPoint, endPoint);
-
-      for (var i = 0; i < dist; i += 5) {
-        drawBrush({ x: startPoint.x + (Math.sin(angle) * i), y: startPoint.y + (Math.cos(angle) * i) })
+      if (!isDrawing) {
+        currentStroke = [];
       }
     }
 
-    function drawBrush(point) {
-      // Draw brush
-      dmCtx.globalAlpha = 0.005;
-      dmCtx.drawImage(brushImage, point.x - brushImage.width / 2, point.y - brushImage.height / 2);
+    function drawSmoothLine(path, innerRadius, outerRadius, value, isAbsolute) {
+      let depth;
+      if (!isAbsolute) {
+        if (value < 0) {
+          // Darken delta brush = invert then lighter brush then invert
+          invert();
+          drawSmoothLine(path, innerRadius, outerRadius, -value, isAbsolute)
+          invert();
+          return;
+        } else {
+          dmCtx.globalAlpha = value * 1. / 256;
+          depth = 255;
+          dmCtx.globalCompositeOperation = 'lighter';
+        }
+      } else {
+        dmCtx.globalAlpha = 1;
+        depth = value;
+        dmCtx.globalCompositeOperation = 'source-over';
+      }
+
+      let alphaSum = 0; // 0.1
+      for (let i = innerRadius + outerRadius + 1; i > innerRadius + 1; i--) {
+
+        let targetAlpha = (outerRadius - i + innerRadius + 1) * 1. / outerRadius * dmCtx.globalAlpha; // 0.2
+        let alphaNeeded = (targetAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
+        // Drawing threshold
+        // if the alpha is too low, the canvas will not be able to result any change
+        if (alphaNeeded * dmCtx.globalAlpha >= 1. / 256 / 2) {
+          drawFlatLine(path, i, depth, alphaNeeded);
+          alphaSum = targetAlpha;
+        }
+      }
+
+      // Draw the solid center part
+      let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
+      drawFlatLine(path, innerRadius, depth, alphaNeeded);
     }
 
-
-    function distanceBetween(point1, point2) {
-      return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+    function invert() {
+      dmCtx.globalAlpha = 1;
+      dmCtx.globalCompositeOperation = 'difference';
+      dmCtx.fillStyle = 'white';
+      dmCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
     }
-    function angleBetween(point1, point2) {
-      return Math.atan2(point2.x - point1.x, point2.y - point1.y);
+
+    function drawFlatLine(path, radius, depth, alpha) {
+      dmCtx.beginPath();
+      dmCtx.lineWidth = radius * 2. - 1.;
+      dmCtx.lineCap = "round";
+      dmCtx.lineJoin = "round";
+      dmCtx.strokeStyle = "rgba(" + depth + "," + depth + "," + depth + "," + alpha + ")";
+      dmCtx.moveTo(path[0].x, path[0].y);
+
+      for (let index = 0; index < path.length; ++index) {
+        let point = path[index];
+        dmCtx.lineTo(point.x, point.y);
+      }
+      dmCtx.stroke();
     }
 
 
