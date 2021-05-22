@@ -1,19 +1,51 @@
 <!doctype html>
 <html>
+
 <head>
-<meta charset="utf-8">
-<link rel="stylesheet" href="css/styles.css"/>
-<link id="hostStyle" rel="stylesheet" href="css/theme.css"/>
-<title>Kantai3D editor</title>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="css/styles.css" />
+  <link id="hostStyle" rel="stylesheet" href="css/theme.css" />
+  <title>Kantai3D editor</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- <link rel="stylesheet" href="css/uikit.min.css" />
+  <script src="js/uikit.min.js"></script>
+  <script src="js/uikit-icons.min.js"></script> -->
 </head>
+
 <body>
-<!--  <div class="if_base">
+  <!--  <div class="if_base">
     <button id="aply">OpenDialog</button>
   </div> -->
-<script src="https://code.jquery.com/jquery-2.0.2.min.js"></script>
-<script src="https://pixijs.download/v5.3.8/pixi.min.js"></script>
+  <script src="https://code.jquery.com/jquery-2.0.2.min.js"></script>
+  <script src="https://pixijs.download/v5.3.8/pixi.min.js"></script>
 
-<canvas id="canvas" oncontextmenu="return false;"></canvas>
-<script src="js/main.js"></script>
+
+  <div style="
+    height: 100%; 
+    width: 160px;
+    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
+    z-index: 1; /* Stay on top */
+    top: 0; /* Stay at the top */
+    left: 0;
+    background-color: #000;
+    overflow-x: hidden; /* Disable horizontal scroll */
+    padding-top: 20px;
+  ">
+
+    <input id="slide-range" type="range" min="0" max="100" step="1" value="100">
+    <div class="input-amount">
+      <input id="input-Amount" name="price" value="100">
+      <span class="unit">$</span>
+    </div>
+  </div>
+
+  <div style="margin-left: 160px; height: 100%;">
+    <canvas id="canvas" oncontextmenu="return false;"></canvas>
+  </div>
+
+  <script src="js/main.js"></script>
+
 </body>
+
 </html>

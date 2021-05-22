@@ -7,7 +7,8 @@
       {
         view: document.querySelector("#canvas"),
         width: 50,
-        height: 50
+        height: 50,
+        autoResize: true
       }
     );
 
@@ -308,10 +309,8 @@
     // Resize function window
     function resize() {
       // Resize the renderer
-      var c = $("#canvas");
-      c.prop('width', window.innerWidth);
-      c.prop('height', window.innerHeight);
-      app.renderer.resize(window.innerWidth, window.innerHeight);
+      const parent = app.view.parentNode;
+      app.renderer.resize(parent.clientWidth, parent.clientHeight);
 
       depthMapImage.width = app.renderer.screen.width;
       depthMapImage.height = app.renderer.screen.height;
