@@ -6,8 +6,6 @@
     const app = new PIXI.Application(
       {
         view: document.querySelector("#canvas"),
-        width: 50,
-        height: 50,
         autoResize: true
       }
     );
@@ -53,7 +51,7 @@
       dmCtx = dmCanvas.getContext('2d');
       dmCtx.drawImage(dmImage, 0, 0);
 
-      dmTexture = PIXI.Texture.fromCanvas(dmCanvas);
+      dmTexture = PIXI.Texture.from(dmCanvas);
       window.displacementFilter.uniforms.displacementMap = dmTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
     }
@@ -68,9 +66,9 @@
     PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
-      if (input && input.size) {
-        this.uniforms.frameWidth = input.size.width;
-        this.uniforms.frameHeight = input.size.height;
+      if (input && input.width && input.height) {
+        this.uniforms.frameWidth = input.width;
+        this.uniforms.frameHeight = input.height;
       }
 
       this.uniforms.canvasSize = {};
@@ -336,9 +334,11 @@
 
 
     function startDrawing() {
-      if (strokes.length == 0 || strokes[strokes.length - 1].length > 0) {
-        strokes.push([]);
+      if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
+        strokes.push({ path: [] });
       }
+      strokes[strokes.length - 1].r1 = parseInt(document.getElementById('brush-inner-radius-slider').value);
+      strokes[strokes.length - 1].r2 = parseInt(document.getElementById('brush-outer-radius-slider').value);
       isDrawing = true;
     }
 
@@ -346,25 +346,25 @@
       isDrawing = false;
     }
 
-    let strokes = [[]];
+    let strokes = [];
 
     function handleMouseMove() {
       let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
       let currentStroke = strokes[strokes.length - 1];
       if (isDrawing && +
-        (currentStroke.length == 0 ||
-          currentPoint.x != currentStroke[currentStroke.length - 1].x ||
-          currentPoint.y != currentStroke[currentStroke.length - 1].y)) {
+        (currentStroke.path.length == 0 ||
+          currentPoint.x != currentStroke.path[currentStroke.path.length - 1].x ||
+          currentPoint.y != currentStroke.path[currentStroke.path.length - 1].y)) {
         // It is the first point or new point
 
-        currentStroke.push(currentPoint);
+        currentStroke.path.push(currentPoint);
 
         dmCtx.globalAlpha = 1;
         dmCtx.globalCompositeOperation = 'source-over';
         dmCtx.drawImage(dmImage, 0, 0);
 
         for (let i = 0; i < strokes.length; i++) {
-          drawSmoothLine(strokes[i], 20, 0, 1, false)
+          drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
         }
 
         dmTexture.update();
@@ -405,8 +405,10 @@
       }
 
       // Draw the solid center part
-      let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
-      drawFlatLine(path, innerRadius, depth, alphaNeeded);
+      if (innerRadius + outerRadius != 0) {
+        let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
+        drawFlatLine(path, innerRadius, depth, alphaNeeded);
+      }
     }
 
     function invert() {
@@ -421,7 +423,7 @@
       dmCtx.lineWidth = radius * 2. - 1.;
       dmCtx.lineCap = "round";
       dmCtx.lineJoin = "round";
-      dmCtx.strokeStyle = "rgba(" + depth + "," + depth + "," + depth + "," + alpha + ")";
+      dmCtx.strokeStyle = "rgba(" + depth + "," + 0 + "," + 0 + "," + alpha + ")";
       dmCtx.moveTo(path[0].x, path[0].y);
 
       for (let index = 0; index < path.length; ++index) {
