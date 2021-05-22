@@ -5,12 +5,15 @@
   <meta charset="utf-8">
   <link rel="stylesheet" href="css/styles.css" />
   <link id="hostStyle" rel="stylesheet" href="css/theme.css" />
+  <link
+    href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAJFBMVEUAAAAzM2YAAAD/zJkzMzP///9mZpkAAP//AABo7/v4v9j/mZnZKbxVAAAAAXRSTlMAQObYZgAAARFJREFUKM9tjr1twzAQhWVPkKMANmnM5zg9yTKVZApR2kAaQE1WMLyBoQWEbGC4C1J6uTz+GIGRfJCo08eHu6v+Yw3gTmAXWiRugW4IZOiwyWI3DqEbx/BeBMjIRBcMUuApsAUTQ2tUNAikTVYEmxQoQ0QLI0h3Ca0ZqfgPGK1gJMJEC9aT8ImouLeetFCYLKpn9tKpLokJtrYiXrxJ4kO21nupfV3E2tSewhObe5hAmnRksXo9LkvoT5e5EWTxeTyEfj6fG3EmirdlOez7y3yiEFAEso/HTci3945DXkSciuLx6hPXL3FgD+5UsIIkxLutj6+ksauYcACd/RUZq2BiU4UCt8K9eKiqKPiJlOqP+AED5UlXsyRHGQAAAABJRU5ErkJggg=="
+    rel="icon" type="image/x-icon" />
   <title>Kantai3D editor</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- <link rel="stylesheet" href="css/uikit.min.css" />
+  <link rel="stylesheet" href="css/uikit.min.css" />
   <script src="js/uikit.min.js"></script>
-  <script src="js/uikit-icons.min.js"></script> -->
+  <script src="js/uikit-icons.min.js"></script>
 </head>
 
 <body>
@@ -23,24 +26,36 @@
 
   <div style="
     height: 100%; 
-    width: 160px;
-    position: fixed; /* Fixed Sidebar (stay in place on scroll) */
-    z-index: 1; /* Stay on top */
-    top: 0; /* Stay at the top */
+    width: 320px;
+    position: fixed;
+    z-index: 1;
+    top: 0;
     left: 0;
-    background-color: #000;
-    overflow-x: hidden; /* Disable horizontal scroll */
+    overflow-x: hidden;
     padding-top: 20px;
   ">
 
-    <input id="slide-range" type="range" min="0" max="100" step="1" value="100">
-    <div class="input-amount">
-      <input id="input-Amount" name="price" value="100">
-      <span class="unit">$</span>
-    </div>
+    <ul class="uk-tab" data-uk-tab="{connect:'#my-id'}">
+      <li><a href="">Tab 1</a></li>
+      <li><a href="">Tab 2</a></li>
+      <li><a href="">Tab 3</a></li>
+    </ul>
+    <ul id="my-id" class="uk-switcher uk-margin">
+      <li><a href="#" id="autoplayer" data-uk-switcher-item="next"></a>
+
+        <input id="slide-range" type="range" min="0" max="100" step="1" value="100">
+        <div class="input-amount">
+          <input id="input-Amount" name="price" value="100">
+          <span class="unit">$</span>
+        </div>
+      </li>
+      <li>Content 2</li>
+      <li>Content 3</li>
+    </ul>
+
   </div>
 
-  <div style="margin-left: 160px; height: 100%;">
+  <div style="margin-left: 320px; height: 100%;">
     <canvas id="canvas" oncontextmenu="return false;"></canvas>
   </div>
 

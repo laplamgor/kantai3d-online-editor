@@ -155,7 +155,7 @@
     var isDrawing = false;
 
     let r, g, b, a;
-    window.addEventListener('mousedown', function (event) {
+    $('#canvas').bind('mousedown', function (event) {
       switch (event.button) {
         case 2:
           tiltX = app.renderer.plugins.interaction.mouse.global.x;
@@ -179,7 +179,7 @@
     }
     );
 
-    window.addEventListener('mouseup', function (event) {
+    $('#canvas').bind('mouseup', function (event) {
       switch (event.button) {
         case 2:
           isTilting = false;
