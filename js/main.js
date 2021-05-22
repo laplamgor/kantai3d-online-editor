@@ -169,7 +169,7 @@
           isPanning = true;
           break;
         case 0:
-          isDrawing = true;
+          startDrawing();
           break;
       }
 
@@ -187,7 +187,7 @@
           isPanning = false;
           break;
         case 0:
-          isDrawing = false;
+          endDrawing();
           break;
       }
     }
@@ -336,16 +336,23 @@
     }
 
 
-    // Load brush
-    var brushPath = './HsbVA.png';
-    var brushImage = new Image();
-    brushImage.src = brushPath;
+    function startDrawing() {
+      if (strokes.length == 0 || strokes[strokes.length - 1].length > 0) {
+        strokes.push([]);
+      }
+      isDrawing = true;
+    }
 
-    let currentStroke = [];
+    function endDrawing() {
+      isDrawing = false;
+    }
+
+    let strokes = [[]];
 
     function handleMouseMove() {
       let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
-      if (isDrawing &&
+      let currentStroke = strokes[strokes.length - 1];
+      if (isDrawing && +
         (currentStroke.length == 0 ||
           currentPoint.x != currentStroke[currentStroke.length - 1].x ||
           currentPoint.y != currentStroke[currentStroke.length - 1].y)) {
@@ -356,13 +363,12 @@
         dmCtx.globalAlpha = 1;
         dmCtx.globalCompositeOperation = 'source-over';
         dmCtx.drawImage(dmImage, 0, 0);
-        drawSmoothLine(currentStroke, 50, 0, 180, true)
+
+        for (let i = 0; i < strokes.length; i++) {
+          drawSmoothLine(strokes[i], 20, 0, 1, false)
+        }
 
         dmTexture.update();
-      }
-
-      if (!isDrawing) {
-        currentStroke = [];
       }
     }
 
