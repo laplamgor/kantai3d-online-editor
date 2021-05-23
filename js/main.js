@@ -1,4 +1,3 @@
-(function () {
   'use strict';
 
   function init() {
@@ -15,7 +14,7 @@
 
     // Load base map as buffer
     var bmImageData;
-    var bmPath = './0463_7319_grmdtyheocuc.png';
+    var bmPath = './f2152.png';
     var bmImage = new Image();
     bmImage.onload = function () {
       let tempCanvas = document.createElement("CANVAS");;
@@ -41,7 +40,7 @@
     // Load depth map as buffer
     let dmCanvas;
     let dmCtx;
-    var dmPath = './0463_7319_grmdtyheocuc_depth.png';
+    var dmPath = './f2152_depth.png';
     var dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
     dmImage.onload = function () {
@@ -722,6 +721,3 @@ void main(void)
 }`;
 
   init();
-}());
-
-
