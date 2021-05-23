@@ -362,10 +362,33 @@
         dmCtx.globalCompositeOperation = 'source-over';
         dmCtx.drawImage(dmImage, 0, 0);
 
+        dmCtx.maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+        let maskCtx = dmCtx.maskCanvas.getContext('2d');
+        let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+        var buf = new ArrayBuffer(dmData.data.length);
+        var dmdd = dmData.data;
+        var buf8 = new Uint8ClampedArray(buf);
+        let masksAllowed = (1 << 15) + (1 << 14); // 1100 0000 0000 0000 in binary
+        for (var i = 0; i < dmdd.length; i++) {
+          buf8[i] = dmdd[i++]; // r
+          let masks = (dmdd[i++] << 8) + dmdd[i++]; // g + b channels are storing the mask data
+          buf8[i] = (masks & masksAllowed) > 0 ? 0 : 255 ; // if it match any given mask, opacity set to 1
+        }
+        
+        dmData.data.set(buf8);
+        maskCtx.putImageData(dmData, 0, 0);
+
         for (let i = 0; i < strokes.length; i++) {
           drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
         }
 
+        // Draw the original image on the masked area
+        // Leaving the changes only on the unmasked area
+        dmCtx.globalCompositeOperation = 'source-over';
+        dmCtx.globalAlpha = 1;
+        dmCtx.drawImage(dmCtx.maskCanvas, 0, 0);
+    
+    
         dmTexture.update();
       }
     }
@@ -493,11 +516,16 @@
 
       return webglPixels;
     }
+
+
+    document.getElementById('file-download-button');
+
+    
   }
 
 
-  var frag =
-    `precision mediump float;
+var frag =
+  `precision mediump float;
 uniform vec2 offset;
 uniform vec2 pan;
 uniform float zoom;
@@ -650,11 +678,11 @@ float steps = max(MAXSTEPS *length(offset *zoom *fit), 30.0);
 void main(void)
 {
     vec2 scale2 = scale * vec2(textureHeight / frameWidth,
-                               textureWidth / frameHeight )
+                              textureWidth / frameHeight )
                   * vec2(1, -1);
     mat2 baseVector =
         mat2(vec2((0.5 - focus) * (offset * zoom * fit) - (offset * zoom * fit) / 2.0) * scale2,
-             vec2((0.5 - focus) * (offset * zoom * fit) + (offset * zoom * fit) / 2.0) * scale2);
+            vec2((0.5 - focus) * (offset * zoom * fit) + (offset * zoom * fit) / 2.0) * scale2);
 
 
     vec2 pos = (vTextureCoord);
