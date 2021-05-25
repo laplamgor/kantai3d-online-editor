@@ -362,32 +362,13 @@
         dmCtx.globalCompositeOperation = 'source-over';
         dmCtx.drawImage(dmImage, 0, 0);
 
-        dmCtx.maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-        let maskCtx = dmCtx.maskCanvas.getContext('2d');
-        let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-        var buf = new ArrayBuffer(dmData.data.length);
-        var dmdd = dmData.data;
-        var buf8 = new Uint8ClampedArray(buf);
-        let masksAllowed = (1 << 15) + (1 << 14); // 1100 0000 0000 0000 in binary
-        for (var i = 0; i < dmdd.length; i++) {
-          buf8[i] = dmdd[i++]; // r
-          let masks = (dmdd[i++] << 8) + dmdd[i++]; // g + b channels are storing the mask data
-          buf8[i] = (masks & masksAllowed) > 0 ? 0 : 255 ; // if it match any given mask, opacity set to 1
-        }
-        
-        dmData.data.set(buf8);
-        maskCtx.putImageData(dmData, 0, 0);
+        updateMaskCanvas();
 
         for (let i = 0; i < strokes.length; i++) {
           drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
         }
 
-        // Draw the original image on the masked area
-        // Leaving the changes only on the unmasked area
-        dmCtx.globalCompositeOperation = 'source-over';
-        dmCtx.globalAlpha = 1;
-        dmCtx.drawImage(dmCtx.maskCanvas, 0, 0);
-    
+        drawCurrentMask();
     
         dmTexture.update();
       }
@@ -432,6 +413,53 @@
         drawFlatLine(path, innerRadius, depth, alphaNeeded);
       }
     }
+
+
+    let maskCanvas;
+    let currentMasks = 65535; // 1111 1111 1111 1111 in binary
+    // Call this when the mask data changed 
+    // or user select another set of masks
+    function updateMaskCanvas() {
+      if (document.getElementById('mask-select-all').checked) {
+        currentMasks = 65535;
+        return; // For select-all mask -> dont need to build the mask area
+      }
+      currentMasks = 0;
+      var checkboxes = document.getElementsByName('mask-checkbox');
+      for (var checkbox of checkboxes) {
+        currentMasks = (currentMasks << 1) + (checkbox.checked ? 1 : 0);
+      }
+      currentMasks = currentMasks << 8;
+
+      maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let maskCtx = maskCanvas.getContext('2d');
+      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      var buf = new ArrayBuffer(dmData.data.length);
+      var dmdd = dmData.data;
+      var buf8 = new Uint8ClampedArray(buf);
+
+
+      for (var i = 0; i < dmdd.length; i++) {
+        buf8[i] = dmdd[i++]; // r
+        let masks = (dmdd[i++] << 8) + dmdd[i++]; // g + b channels are storing the mask data
+        buf8[i] = (masks & currentMasks) > 0 ? 0 : 255 ; // if it match any given mask, opacity set to 1
+      }
+      
+      dmData.data.set(buf8);
+      maskCtx.putImageData(dmData, 0, 0);
+    }
+
+
+    function drawCurrentMask() {
+      if (maskCanvas && currentMasks != 65535) {
+        // Draw the original image on the masked area
+        // Leaving the changes only on the unmasked area
+        dmCtx.globalCompositeOperation = 'source-over';
+        dmCtx.globalAlpha = 1;
+        dmCtx.drawImage(maskCanvas, 0, 0);
+      }
+    }
+
 
     function invert() {
       dmCtx.globalAlpha = 1;
@@ -518,8 +546,14 @@
     }
 
 
-    document.getElementById('file-download-button');
+    // document.getElementById('file-download-button');
 
+    document.getElementById('mask-select-all').onclick = function() {
+      var checkboxes = document.getElementsByName('mask-checkbox');
+      for (var checkbox of checkboxes) {
+        checkbox.checked = this.checked;
+      }
+    }
     
   }
 
