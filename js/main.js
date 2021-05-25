@@ -425,8 +425,8 @@
         return; // For select-all mask -> dont need to build the mask area
       }
       currentMasks = 0;
-      var checkboxes = document.getElementsByName('mask-checkbox');
-      for (var checkbox of checkboxes) {
+      for (var i = 0; i < 8; i++) {
+        var checkbox = document.getElementById('mask-' + i);
         currentMasks = (currentMasks << 1) + (checkbox.checked ? 1 : 0);
       }
       currentMasks = currentMasks << 8;
