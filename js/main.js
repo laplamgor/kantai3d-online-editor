@@ -347,6 +347,8 @@
 
     let strokes = [];
 
+
+
     function handleMouseMove() {
       let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
       let currentStroke = strokes[strokes.length - 1];
@@ -355,23 +357,29 @@
           currentPoint.x != currentStroke.path[currentStroke.path.length - 1].x ||
           currentPoint.y != currentStroke.path[currentStroke.path.length - 1].y)) {
         // It is the first point or new point
-
         currentStroke.path.push(currentPoint);
-
-        dmCtx.globalAlpha = 1;
-        dmCtx.globalCompositeOperation = 'source-over';
-        dmCtx.drawImage(dmImage, 0, 0);
-
-        updateMaskCanvas();
-
-        for (let i = 0; i < strokes.length; i++) {
-          drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
-        }
-
-        drawCurrentMask();
-    
-        dmTexture.update();
+        
+        redraw()
       }
+    }
+
+    function redraw() {
+      // Draw the base image
+      dmCtx.globalAlpha = 1;
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.drawImage(dmImage, 0, 0);
+
+      updateMaskCanvas();
+
+      // Draw all steps
+      for (let i = 0; i < strokes.length; i++) {
+        drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
+      }
+
+
+      drawCurrentMask();
+  
+      dmTexture.update();
     }
 
     function drawSmoothLine(path, innerRadius, outerRadius, value, isAbsolute) {
