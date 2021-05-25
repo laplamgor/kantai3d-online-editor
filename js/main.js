@@ -343,11 +343,26 @@
 
     function endDrawing() {
       isDrawing = false;
+      updateCache();
     }
 
     let strokes = [];
 
+    let cacheBaseMap; // The image of a stage, reducing the need to drawing old history brush repeatedly
+    let cacheCtx;
+    let cacheBaseMapHistoryIndex = -1; // The history index of the cache
 
+    // Call me when a new history change is confirmed (i.e. mouse up)
+    function updateCache() {
+      if (!cacheBaseMap || cacheBaseMap.width != dmCanvas.width || cacheBaseMap.height != dmCanvas.height) {
+        cacheBaseMap = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+        cacheCtx = cacheBaseMap.getContext('2d');
+      }
+      cacheCtx.fillStyle = 'white';
+      cacheCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+      cacheCtx.drawImage(dmCanvas, 0, 0);
+      cacheBaseMapHistoryIndex = strokes.length -1;
+    }
 
     function handleMouseMove() {
       let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
@@ -358,24 +373,30 @@
           currentPoint.y != currentStroke.path[currentStroke.path.length - 1].y)) {
         // It is the first point or new point
         currentStroke.path.push(currentPoint);
-        
+
         redraw()
       }
     }
 
     function redraw() {
+      let cacheValid = cacheBaseMap != null && cacheBaseMapHistoryIndex < strokes.length;
+
       // Draw the base image
       dmCtx.globalAlpha = 1;
       dmCtx.globalCompositeOperation = 'source-over';
-      dmCtx.drawImage(dmImage, 0, 0);
+      if (cacheValid) {
+        dmCtx.drawImage(cacheBaseMap, 0, 0);
+      } else {
+        // Start over from the first history
+        dmCtx.drawImage(dmImage, 0, 0);
+      }
 
       updateMaskCanvas();
 
       // Draw all steps
-      for (let i = 0; i < strokes.length; i++) {
+      for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
         drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
       }
-
 
       drawCurrentMask();
   
