@@ -48,6 +48,8 @@
       dmCanvas.width = dmImage.width;
       dmCanvas.height = dmImage.height;
       dmCtx = dmCanvas.getContext('2d');
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.globalAlpha = 1;
       dmCtx.drawImage(dmImage, 0, 0);
 
       dmTexture = PIXI.Texture.from(dmCanvas);
@@ -469,9 +471,11 @@
 
 
       for (var i = 0; i < dmdd.length; i++) {
-        buf8[i] = dmdd[i++]; // r
-        let masks = (dmdd[i++] << 8) + dmdd[i++]; // g + b channels are storing the mask data
-        buf8[i] = (masks & currentMasks) > 0 ? 0 : 255 ; // if it match any given mask, opacity set to 1
+        buf8[i] = dmdd[i]; // r
+        buf8[++i] = dmdd[i]; // g
+        let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
+        buf8[i] = dmdd[i]; // b
+        buf8[++i] = (masks & currentMasks) > 0 ? 0 : 255 ; // a, if it match any given mask, opacity set to 1
       }
       
       dmData.data.set(buf8);
