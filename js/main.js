@@ -153,7 +153,6 @@
 
     var isDrawing = false;
 
-    let r, g, b, a;
     $('#canvas').bind('mousedown', function (event) {
       switch (event.button) {
         case 2:
@@ -265,18 +264,43 @@
 
       }
 
-
-      if (needUpdateReverseMapBuffer) {
-        needUpdateReverseMapBuffer = false;
-        reverseMapBuffer = extractPixelsWithoutPostmultiply(containerReverseMap);
-      }
-
       if (window.displacementFilter.uniforms && window.displacementFilter.uniforms.canvasSize && window.displacementFilter.uniforms.textureSize) {
-        r = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4];
-        g = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 1];
-        b = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 2];
-        a = reverseMapBuffer[(Math.round(app.renderer.plugins.interaction.mouse.global.y) * window.displacementFilter.uniforms.canvasSize[0] + Math.round(app.renderer.plugins.interaction.mouse.global.x)) * 4 + 3];
+        
+        let r, g, b, a;
 
+        let x = Math.round(app.renderer.plugins.interaction.mouse.global.x);
+        let y = Math.round(app.renderer.plugins.interaction.mouse.global.y);
+        let pos = (y * window.displacementFilter.uniforms.canvasSize[0] + x) * 4;
+        if (needUpdateReverseMapBuffer) {
+
+          if (isPanning || isTilting || isDrawing) {
+            // If the user is changing the viewport, there is not useful to cache the full screen reverse map
+            // We only pick one pixel for the current cursor position
+            let rgba = extractOnePixel(containerReverseMap, x, y);
+
+            r = rgba[0];
+            g = rgba[1];
+            b = rgba[2];
+            a = rgba[3];
+          } else {
+            // The user is moving cursor but not changing the viewport nor drawing
+            // It is helpful to cache the whole screen size reverse map buffer for better performance
+            needUpdateReverseMapBuffer = false;
+            reverseMapBuffer = extractPixelsWithoutPostmultiply(containerReverseMap);
+            r = reverseMapBuffer[pos];
+            g = reverseMapBuffer[pos + 1];
+            b = reverseMapBuffer[pos + 2];
+            a = reverseMapBuffer[pos + 3];
+          }
+        } else {
+          // existing reverse map buffer cache is still valid
+          r = reverseMapBuffer[pos];
+          g = reverseMapBuffer[pos + 1];
+          b = reverseMapBuffer[pos + 2];
+          a = reverseMapBuffer[pos + 3];
+        }
+
+        
 
 
 
@@ -584,6 +608,78 @@
 
       return webglPixels;
     }
+
+
+
+
+    // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
+    function extractOnePixel(target, x, y) {
+      let BYTES_PER_PIXEL = 4;
+      const renderer = app.renderer;
+      let resolution;
+      let frame;
+      let renderTexture;
+      let generated = false;
+
+      if (target) {
+        if (target instanceof PIXI.RenderTexture) {
+          renderTexture = target;
+        }
+        else {
+          renderTexture = renderer.generateTexture(target);
+          generated = true;
+        }
+      }
+
+      if (renderTexture) {
+        resolution = renderTexture.baseTexture.resolution;
+        frame = renderTexture.frame;
+
+        // bind the buffer
+        renderer.renderTexture.bind(renderTexture);
+      }
+      else {
+        resolution = renderer.resolution;
+
+        frame = TEMP_RECT;
+        frame.width = renderer.width;
+        frame.height = renderer.height;
+
+        renderer.renderTexture.bind(null);
+      }
+
+      const width = frame.width * resolution;
+      const height = frame.height * resolution;
+
+      const webglPixels = new Uint8Array(BYTES_PER_PIXEL * 1 * 1);
+
+      // read pixels to the array
+      const gl = renderer.gl;
+
+      gl.readPixels(
+        (frame.x + x) * resolution,
+        (frame.y + y) * resolution,
+        1,
+        1,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        webglPixels
+      );
+
+      if (generated) {
+        renderTexture.destroy(true);
+      }
+
+      return webglPixels;
+    }
+
+
+
+
+
+
+
+
 
 
     // document.getElementById('file-download-button');
