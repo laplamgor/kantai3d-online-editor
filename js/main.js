@@ -459,12 +459,18 @@
         currentMasks = 65535;
         return; // For select-all mask -> dont need to build the mask area
       }
-      currentMasks = 0;
+      let newMasks = 0;
       for (var i = 0; i < 8; i++) {
         var checkbox = document.getElementById('mask-' + i);
-        currentMasks = (currentMasks << 1) + (checkbox.checked ? 1 : 0);
+        newMasks = (newMasks << 1) + (checkbox.checked ? 1 : 0);
       }
-      currentMasks = currentMasks << 8;
+      newMasks = newMasks << 8;
+      if (currentMasks == newMasks) {
+        // Mask selection not updated
+        return;
+      } else {
+        currentMasks = newMasks;
+      }
 
       maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let maskCtx = maskCanvas.getContext('2d');
