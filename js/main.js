@@ -123,8 +123,8 @@
 
 
     var container = new PIXI.Container();
-    var bunnyReverse = new PIXI.Sprite(PIXI.Texture.WHITE);
-    bunnyReverse.anchor.set(0.5);
+    var cursorSpirte = new PIXI.Sprite(PIXI.Texture.WHITE);
+    cursorSpirte.anchor.set(0.5);
     container.filters = [window.displacementFilter];
     container.addChild(depthMapImage);
 
@@ -133,7 +133,7 @@
     window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
 
     var containerReverseMap = new PIXI.Container();
-    container.addChild(bunnyReverse);
+    container.addChild(cursorSpirte);
     containerReverseMap.filters = [window.offsetFilter];
     containerReverseMap.addChild(depthMapImage2);
 
@@ -270,7 +270,9 @@
 
         let x = Math.round(app.renderer.plugins.interaction.mouse.global.x);
         let y = Math.round(app.renderer.plugins.interaction.mouse.global.y);
-        let pos = (y * window.displacementFilter.uniforms.canvasSize[0] + x) * 4;
+        let w = window.displacementFilter.uniforms.canvasSize[0];
+        let h = window.displacementFilter.uniforms.canvasSize[1];
+        let pos = (y * w + x) * 4;
         if (needUpdateReverseMapBuffer) {
 
           if (isPanning || isTilting || isDrawing) {
@@ -304,22 +306,22 @@
 
 
 
+        // scale = zoom * fit
+        var scale = window.displacementFilter.uniforms.zoom * 
+          Math.min(w / window.displacementFilter.uniforms.textureSize[0], h / window.displacementFilter.uniforms.textureSize[1]);
 
-        var zoom = window.displacementFilter.uniforms.zoom;
-        var fit = Math.min(window.displacementFilter.uniforms.canvasSize[0] / window.displacementFilter.uniforms.textureSize[0],
-          window.displacementFilter.uniforms.canvasSize[1] / window.displacementFilter.uniforms.textureSize[1]);
-        let mouseX = (app.renderer.plugins.interaction.mouse.global.x - window.displacementFilter.uniforms.canvasSize[0] / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * zoom * fit);
+        let mouseX = (app.renderer.plugins.interaction.mouse.global.x - w / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * scale);
         mouseX += window.displacementFilter.uniforms.pan[0];
-        mouseX = mouseX / zoom / fit;
+        mouseX = mouseX / scale;
         curOnTexX = mouseX + ((r - 128. + (b - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[0];
 
-        let mouseY = (app.renderer.plugins.interaction.mouse.global.y - window.displacementFilter.uniforms.canvasSize[1] / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * zoom * fit);
+        let mouseY = (app.renderer.plugins.interaction.mouse.global.y - h / 2 + window.displacementFilter.uniforms.textureSize[1] / 2 * scale);
         mouseY += window.displacementFilter.uniforms.pan[1];
-        mouseY = mouseY / zoom / fit;
+        mouseY = mouseY / scale;
         curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[1];
 
-        bunnyReverse.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * window.displacementFilter.uniforms.canvasSize[0];
-        bunnyReverse.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * window.displacementFilter.uniforms.canvasSize[1];
+        cursorSpirte.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * w;
+        cursorSpirte.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * h;
       }
 
       window.requestAnimationFrame(step);
@@ -609,10 +611,7 @@
       return webglPixels;
     }
 
-
-
-
-    // Function to perform app.renderer.extract.pixels in V5 without Postmultiply alpha channel 
+    // Function to extract only one pixel at specific location
     function extractOnePixel(target, x, y) {
       let BYTES_PER_PIXEL = 4;
       const renderer = app.renderer;
@@ -672,14 +671,6 @@
 
       return webglPixels;
     }
-
-
-
-
-
-
-
-
 
 
     // document.getElementById('file-download-button');
