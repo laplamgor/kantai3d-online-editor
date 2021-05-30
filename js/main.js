@@ -195,6 +195,9 @@
 
     window.displacementFilter.uniforms.zoom = 1.0;
     $('#canvas').bind('mousewheel', function (e) {
+      
+      needUpdateReverseMapBuffer = true;
+
       if (e.originalEvent.wheelDelta / 120 > 0) {
         if (window.displacementFilter.uniforms.zoom < 30.0) {
           window.displacementFilter.uniforms.zoom *= 1.1;
@@ -231,7 +234,8 @@
     var endy = 0;
     function step(timestamp) {
       if (depthMapImage && depthMapImage.texture && app.renderer.view.style) {
-        if (endx != app.renderer.plugins.interaction.mouse.global.x || endy != app.renderer.plugins.interaction.mouse.global.y) {
+
+        if ((isPanning || isTilting || isDrawing) && (endx != app.renderer.plugins.interaction.mouse.global.x || endy != app.renderer.plugins.interaction.mouse.global.y)) {
           needUpdateReverseMapBuffer = true;
         }
         endx = app.renderer.plugins.interaction.mouse.global.x;
