@@ -167,14 +167,11 @@
           panY = app.renderer.plugins.interaction.mouse.global.y;
           console.log('case 2:!');
           isPanning = true;
-          break;
+          return false;
         case 0:
           startDrawing();
           break;
       }
-
-      console.log('r: ' + r + '  g: ' + g);
-      console.log('b: ' + b + '  a: ' + a);
     }
     );
 
