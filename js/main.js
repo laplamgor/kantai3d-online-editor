@@ -363,7 +363,7 @@
 
     function startDrawing() {
       if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
-        strokes.push({ path: [] });
+        strokes.push({ path: [], mask: 65535 });
       }
       strokes[strokes.length - 1].r1 = parseInt(document.getElementById('brush-inner-radius-slider').value);
       strokes[strokes.length - 1].r2 = parseInt(document.getElementById('brush-outer-radius-slider').value);
@@ -420,14 +420,16 @@
         dmCtx.drawImage(dmImage, 0, 0);
       }
 
-      updateMaskCanvas();
+      strokes[strokes.length - 1].mask = getCurrentMaskSelected();
+      
 
       // Draw all steps
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
-        drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false)
+        updateMaskCanvas(strokes[i].mask);
+        drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
+        drawMaskedArea(strokes[i].mask);
       }
 
-      drawCurrentMask();
   
       dmTexture.update();
     }
@@ -472,28 +474,33 @@
       }
     }
 
-
     let maskCanvas;
-    let currentMasks = 65535; // 1111 1111 1111 1111 in binary
-    // Call this when the mask data changed 
-    // or user select another set of masks
-    function updateMaskCanvas() {
-      if (document.getElementById('mask-select-all').checked) {
-        currentMasks = 65535;
-        return; // For select-all mask -> dont need to build the mask area
-      }
+
+    function getCurrentMaskSelected() {
       let newMasks = 0;
+      if (document.getElementById('mask-select-all').checked) {
+        return 65535;
+      }
       for (var i = 0; i < 8; i++) {
         var checkbox = document.getElementById('mask-' + i);
         newMasks = (newMasks << 1) + (checkbox.checked ? 1 : 0);
       }
       newMasks = newMasks << 8;
-      if (currentMasks == newMasks) {
-        // Mask selection not updated
-        return;
-      } else {
-        currentMasks = newMasks;
+      return newMasks;
+    }
+
+    
+    // Call this when the mask data changed 
+    // or user select another set of masks
+    function updateMaskCanvas(newMasks) {
+      if (newMasks == 65535) {
+        return; // For select-all mask -> dont need to build the mask area
       }
+      // if (currentMasks == newMasks) {
+      //   // Mask selection not updated
+      //   return;
+      // }
+      // currentStroke.mask = newMasks;
 
       maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let maskCtx = maskCanvas.getContext('2d');
@@ -508,7 +515,7 @@
         buf8[++i] = dmdd[i]; // g
         let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
         buf8[i] = dmdd[i]; // b
-        buf8[++i] = (masks & currentMasks) > 0 ? 0 : 255 ; // a, if it match any given mask, opacity set to 1
+        buf8[++i] = (masks & newMasks) > 0 ? 0 : 255 ; // a, if it match any given mask, opacity set to 1
       }
       
       dmData.data.set(buf8);
@@ -516,8 +523,8 @@
     }
 
 
-    function drawCurrentMask() {
-      if (maskCanvas && currentMasks != 65535) {
+    function drawMaskedArea(mask) {
+      if (maskCanvas && mask != 65535) {
         // Draw the original image on the masked area
         // Leaving the changes only on the unmasked area
         dmCtx.globalCompositeOperation = 'source-over';
