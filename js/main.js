@@ -680,7 +680,6 @@
     }
 
 
-    // document.getElementById('file-download-button');
 
     document.getElementById('mask-select-all').onclick = function() {
       var checkboxes = document.getElementsByName('mask-checkbox');
@@ -688,6 +687,16 @@
         checkbox.checked = this.checked;
       }
     }
+
+    // UI event for download button
+    var downloadButton = document.getElementById('file-download-button');
+    downloadButton.addEventListener('click', function (e) {
+        var link = document.createElement('a');
+        link.download = 'download.png';
+        link.href = dmCanvas.toDataURL('image/png');
+        link.click();
+        link.delete;
+    });
     
   }
 
