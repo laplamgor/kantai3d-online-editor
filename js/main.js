@@ -1,3 +1,4 @@
+{
   'use strict';
 
   function init() {
@@ -191,7 +192,7 @@
 
     window.displacementFilter.uniforms.zoom = 1.0;
     $('#canvas').bind('mousewheel', function (e) {
-      
+
       needUpdateReverseMapBuffer = true;
 
       if (e.originalEvent.wheelDelta / 120 > 0) {
@@ -265,7 +266,7 @@
       }
 
       if (window.displacementFilter.uniforms && window.displacementFilter.uniforms.canvasSize && window.displacementFilter.uniforms.textureSize) {
-        
+
         let r, g, b, a;
 
         let x = Math.round(app.renderer.plugins.interaction.mouse.global.x);
@@ -302,12 +303,12 @@
           a = reverseMapBuffer[pos + 3];
         }
 
-        
+
 
 
 
         // scale = zoom * fit
-        var scale = window.displacementFilter.uniforms.zoom * 
+        var scale = window.displacementFilter.uniforms.zoom *
           Math.min(w / window.displacementFilter.uniforms.textureSize[0], h / window.displacementFilter.uniforms.textureSize[1]);
 
         let mouseX = (app.renderer.plugins.interaction.mouse.global.x - w / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * scale);
@@ -390,7 +391,7 @@
       cacheCtx.fillStyle = 'white';
       cacheCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
       cacheCtx.drawImage(dmCanvas, 0, 0);
-      cacheBaseMapHistoryIndex = strokes.length -1;
+      cacheBaseMapHistoryIndex = strokes.length - 1;
     }
 
     function handleMouseMove() {
@@ -421,18 +422,135 @@
       }
 
       strokes[strokes.length - 1].mask = getCurrentMaskSelected();
-      
 
-      // Draw all steps
-      for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
-        updateMaskCanvas(strokes[i].mask);
-        drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
-        drawMaskedArea(strokes[i].mask);
-      }
 
-  
+      // // Draw all steps
+      // for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
+      //   updateMaskCanvas(strokes[i].mask);
+      //   drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
+      //   drawMaskedArea(strokes[i].mask);
+      // }
+
+      updateMedianMask(3);
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.globalAlpha = 1;
+      dmCtx.drawImage(maskCanvas, 0, 0);
+
+
       dmTexture.update();
     }
+
+
+
+    // Call this when the mask data changed 
+    // or user select another set of masks
+    function updateMedianMask(radius) {
+
+      maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let maskCtx = maskCanvas.getContext('2d');
+      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      var buf = new ArrayBuffer(dmData.data.length);
+      var dmdd = dmData.data;
+      var buf8 = new Uint8ClampedArray(buf);
+
+
+      // for (var i = 0; i < dmdd.length; i++) {
+      //   buf8[i] = dmdd[i]; // r
+      //   buf8[++i] = dmdd[i]; // g
+      //   let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
+      //   buf8[i] = dmdd[i]; // b
+      //   buf8[++i] = (masks & newMasks) > 0 ? 0 : 255; // a, if it match any given mask, opacity set to 1
+      // }
+
+
+      for (var x = 0; x < dmData.width; x++) {
+        for (var y = 0; y < dmData.height; y++) {
+          // collection array for median filter
+          var P = new Array();
+          var count = 0;
+
+          
+          var imageIndex = (x + y * dmData.width) * 4;
+          buf8[imageIndex + 1] = dmdd[imageIndex + 1]; // G
+          buf8[imageIndex + 2] = dmdd[imageIndex + 1]; // B
+
+          // move with a little window over the image
+          for (var u = 0; u < radius * 2 + 1; u++) {
+            for (var v = 0; v < radius * 2 + 1; v++) {
+              // calculate the index of the sliding window
+              var windowIndex = ((x + u - radius) + (y + v - radius) * dmData.width) * 4;
+              // get the color values
+              var r = dmdd[windowIndex + 0]; // R
+              var g = dmdd[windowIndex + 1]; // G
+              var b = dmdd[windowIndex + 2]; // B
+              var a = dmdd[windowIndex + 3]; // A
+              // calculate the grey value and save it to the prepaired array
+              P[count] = r;
+              count++;
+            }
+          }
+          // sorting the array
+          P.sort();
+          // calculate the index of the image 
+          // save the median to the single color positions
+          buf8[imageIndex + 0] = P[4]; // R
+          buf8[imageIndex + 1] = parseInt(P[(radius * 2 + 2) * radius]); // G
+          buf8[imageIndex + 2] = parseInt(P[(radius * 2 + 2) * radius]); // B
+          // set the original alpha
+          buf8[imageIndex + 3] = 255;//dmdd[imageIndex + 3]; // A 
+        }
+      }
+
+
+      dmData.data.set(buf8);
+      maskCtx.putImageData(dmData, 0, 0);
+    }
+
+
+    function denoisePath(path, radius) {
+      let depth;
+      if (!isAbsolute) {
+        if (value < 0) {
+          // Darken delta brush = invert then lighter brush then invert
+          invert();
+          drawSmoothLine(path, innerRadius, outerRadius, -value, isAbsolute)
+          invert();
+          return;
+        } else {
+          dmCtx.globalAlpha = value * 1. / 256;
+          depth = 255;
+          dmCtx.globalCompositeOperation = 'lighter';
+        }
+      } else {
+        dmCtx.globalAlpha = 1;
+        depth = value;
+        dmCtx.globalCompositeOperation = 'source-over';
+      }
+
+
+      // Draw the solid center part
+      if (innerRadius + outerRadius != 0) {
+        let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
+        drawFlatLine(path, radius, depth, alphaNeeded);
+      }
+    }
+
+
+    function drawFlatLine(path, radius, depth, alpha) {
+      dmCtx.beginPath();
+      dmCtx.lineWidth = radius * 2. - 1.;
+      dmCtx.lineCap = "round";
+      dmCtx.lineJoin = "round";
+      dmCtx.strokeStyle = "rgba(" + depth + "," + 0 + "," + 0 + "," + alpha + ")";
+      dmCtx.moveTo(path[0].x, path[0].y);
+
+      for (let index = 0; index < path.length; ++index) {
+        let point = path[index];
+        dmCtx.lineTo(point.x, point.y);
+      }
+      dmCtx.stroke();
+    }
+
 
     function drawSmoothLine(path, innerRadius, outerRadius, value, isAbsolute) {
       let depth;
@@ -489,7 +607,7 @@
       return newMasks;
     }
 
-    
+
     // Call this when the mask data changed 
     // or user select another set of masks
     function updateMaskCanvas(newMasks) {
@@ -515,9 +633,9 @@
         buf8[++i] = dmdd[i]; // g
         let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
         buf8[i] = dmdd[i]; // b
-        buf8[++i] = (masks & newMasks) > 0 ? 0 : 255 ; // a, if it match any given mask, opacity set to 1
+        buf8[++i] = (masks & newMasks) > 0 ? 0 : 255; // a, if it match any given mask, opacity set to 1
       }
-      
+
       dmData.data.set(buf8);
       maskCtx.putImageData(dmData, 0, 0);
     }
@@ -681,7 +799,7 @@
 
 
 
-    document.getElementById('mask-select-all').onclick = function() {
+    document.getElementById('mask-select-all').onclick = function () {
       var checkboxes = document.getElementsByName('mask-checkbox');
       for (var checkbox of checkboxes) {
         checkbox.checked = this.checked;
@@ -691,18 +809,18 @@
     // UI event for download button
     var downloadButton = document.getElementById('file-download-button');
     downloadButton.addEventListener('click', function (e) {
-        var link = document.createElement('a');
-        link.download = 'download.png';
-        link.href = dmCanvas.toDataURL('image/png');
-        link.click();
-        link.delete;
+      var link = document.createElement('a');
+      link.download = 'download.png';
+      link.href = dmCanvas.toDataURL('image/png');
+      link.click();
+      link.delete;
     });
-    
+
   }
 
 
-var frag =
-  `precision mediump float;
+  var frag =
+    `precision mediump float;
 uniform vec2 offset;
 uniform vec2 pan;
 uniform float zoom;
@@ -924,5 +1042,5 @@ void main(void)
     }
 
 }`;
-
-  init();
+}
+init();
