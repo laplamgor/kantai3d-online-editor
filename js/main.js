@@ -428,7 +428,7 @@
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
         updateMaskCanvas(strokes[i].mask);
         // drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
-        updateMedianMask(10, strokes[strokes.length - 1].mask, strokes[i].path, strokes[i].r1);
+        updateMedianMask(10, strokes[i].path, strokes[i].r1);
         drawMaskedArea(strokes[i].mask);
 
       }
@@ -440,8 +440,7 @@
 
 
 
-    function updateMedianMask(blurRadius, newMasks, path, radius) {
-
+    function updateMedianMask(blurRadius, path, radius) {
       // Prepare the original image but earsed the stroke area
       // With very shape edge
       let strokeInverseCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
@@ -476,7 +475,7 @@
       strokeCtx.lineWidth = radius * 2. - 1.;
       strokeCtx.lineCap = "round";
       strokeCtx.lineJoin = "round";
-      strokeCtx.strokeStyle = "rgba(255," + 0 + "," + 0 + ",255)";
+      strokeCtx.strokeStyle = "rgba(255,0,0,255)";
       strokeCtx.moveTo(path[0].x, path[0].y);
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
@@ -513,36 +512,6 @@
       dmCtx.globalCompositeOperation = 'source-over';
       dmCtx.drawImage(strokeInverseCanvas, 0, 0);
     }
-
-
-    function denoisePath(path, radius) {
-      let depth;
-      if (!isAbsolute) {
-        if (value < 0) {
-          // Darken delta brush = invert then lighter brush then invert
-          invert();
-          drawSmoothLine(path, innerRadius, outerRadius, -value, isAbsolute)
-          invert();
-          return;
-        } else {
-          dmCtx.globalAlpha = value * 1. / 256;
-          depth = 255;
-          dmCtx.globalCompositeOperation = 'lighter';
-        }
-      } else {
-        dmCtx.globalAlpha = 1;
-        depth = value;
-        dmCtx.globalCompositeOperation = 'source-over';
-      }
-
-
-      // Draw the solid center part
-      if (innerRadius + outerRadius != 0) {
-        let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
-        drawFlatLine(path, radius, depth, alphaNeeded);
-      }
-    }
-
 
     function drawFlatLine(path, radius, depth, alpha) {
       dmCtx.beginPath();
