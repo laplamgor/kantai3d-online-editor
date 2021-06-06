@@ -431,7 +431,7 @@
       //   drawMaskedArea(strokes[i].mask);
       // }
 
-      updateMedianMask(3);
+      updateMedianMask(10);
       dmCtx.globalCompositeOperation = 'source-over';
       dmCtx.globalAlpha = 1;
       dmCtx.drawImage(maskCanvas, 0, 0);
@@ -462,28 +462,27 @@
       //   buf8[++i] = (masks & newMasks) > 0 ? 0 : 255; // a, if it match any given mask, opacity set to 1
       // }
 
-
-      for (var x = 0; x < dmData.width; x++) {
+      let w = dmData.width;
+      for (var x = 0; x < w; x++) {
         for (var y = 0; y < dmData.height; y++) {
           // collection array for median filter
           var P = new Array();
           var count = 0;
 
-          
-          var imageIndex = (x + y * dmData.width) * 4;
+          var imageIndex = (x + y * w) * 4;
           buf8[imageIndex + 1] = dmdd[imageIndex + 1]; // G
-          buf8[imageIndex + 2] = dmdd[imageIndex + 1]; // B
+          buf8[imageIndex + 2] = dmdd[imageIndex + 2]; // B
 
           // move with a little window over the image
-          for (var u = 0; u < radius * 2 + 1; u++) {
-            for (var v = 0; v < radius * 2 + 1; v++) {
+          for (var u = x - radius; u < x + radius + 1; u++) {
+            for (var v = y - radius; v < y + radius + 1; v++) {
               // calculate the index of the sliding window
-              var windowIndex = ((x + u - radius) + (y + v - radius) * dmData.width) * 4;
+              var windowIndex = (u + y * w) * 4;
               // get the color values
-              var r = dmdd[windowIndex + 0]; // R
-              var g = dmdd[windowIndex + 1]; // G
-              var b = dmdd[windowIndex + 2]; // B
-              var a = dmdd[windowIndex + 3]; // A
+              var r = dmdd[windowIndex]; // R
+              // var g = dmdd[windowIndex + 1]; // G
+              // var b = dmdd[windowIndex + 2]; // B
+              // var a = dmdd[windowIndex + 3]; // A
               // calculate the grey value and save it to the prepaired array
               P[count] = r;
               count++;
@@ -491,11 +490,9 @@
           }
           // sorting the array
           P.sort();
-          // calculate the index of the image 
-          // save the median to the single color positions
-          buf8[imageIndex + 0] = P[4]; // R
-          buf8[imageIndex + 1] = parseInt(P[(radius * 2 + 2) * radius]); // G
-          buf8[imageIndex + 2] = parseInt(P[(radius * 2 + 2) * radius]); // B
+          
+          let mid = (count - 1  ) / 2;
+          buf8[imageIndex] = P[mid]; // R
           // set the original alpha
           buf8[imageIndex + 3] = 255;//dmdd[imageIndex + 3]; // A 
         }
