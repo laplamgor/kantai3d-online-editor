@@ -424,14 +424,15 @@
       strokes[strokes.length - 1].mask = getCurrentMaskSelected();
 
 
-      // // Draw all steps
-      // for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
-      //   updateMaskCanvas(strokes[i].mask);
-      //   drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
-      //   drawMaskedArea(strokes[i].mask);
-      // }
+      // Draw all steps
+      for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
+        updateMaskCanvas(strokes[i].mask);
+        // drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
+        updateMedianMask(10, strokes[strokes.length - 1].mask, strokes[i].path, strokes[i].r1);
+        drawMaskedArea(strokes[i].mask);
 
-      updateMedianMask(1, strokes[strokes.length - 1].mask);
+      }
+
 
 
       dmTexture.update();
@@ -439,39 +440,78 @@
 
 
 
-    function updateMedianMask(radius, newMasks) {
-      let blurCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let maskCtx = blurCanvas.getContext('2d');
+    function updateMedianMask(blurRadius, newMasks, path, radius) {
 
-
-      dmCtx.globalCompositeOperation = 'source-over';
-      dmCtx.globalAlpha = 1;
-      dmCtx.drawImage(blurCanvas, 0, 0);
-      dmCtx.filter = '';
-
-      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      var buf = new ArrayBuffer(dmData.data.length);
-      var dmdd = dmData.data;
-      var buf8 = new Uint8ClampedArray(buf);
-
-
-      for (var i = 0; i < dmdd.length; i++) {
-        buf8[i] = dmdd[i]; // r
-        buf8[++i] = dmdd[i]; // g
-        let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
-        buf8[i] = dmdd[i]; // b
-        buf8[++i] = (masks & newMasks) > 0 ? 255 : 0; // a, if it match any given mask, opacity set to 1
+      // Prepare the original image but earsed the stroke area
+      // With very shape edge
+      let strokeInverseCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let strokeInverseCtx = strokeInverseCanvas.getContext('2d');
+      strokeInverseCtx.drawImage(dmCanvas, 0, 0);
+      strokeInverseCtx.globalCompositeOperation = 'destination-out'; // eraser effect
+      strokeInverseCtx.beginPath();
+      strokeInverseCtx.lineWidth = radius * 1.5 - 2;
+      strokeInverseCtx.lineCap = "round";
+      strokeInverseCtx.lineJoin = "round";
+      strokeInverseCtx.strokeStyle = "rgba(0,0,0,255)";
+      strokeInverseCtx.moveTo(path[0].x, path[0].y);
+      for (let index = 0; index < path.length; ++index) {
+        let point = path[index];
+        strokeInverseCtx.lineTo(point.x, point.y);
       }
-      dmData.data.set(buf8);
-      maskCtx.putImageData(dmData, 0, 0);
+      strokeInverseCtx.stroke();
+      let strokeInverseData = strokeInverseCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      var sidd = strokeInverseData.data;
+      for (var i = 3; i < sidd.length; i += 4) {
+        sidd[i] = sidd[i] < 255 ? 0 : 255; // a, make it shape
+      }
+      strokeInverseCtx.putImageData(strokeInverseData, 0, 0);
 
 
-      
+      // Prepare the original image with only the stroke area
+      let strokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let strokeCtx = strokeCanvas.getContext('2d');
+      strokeCtx.drawImage(dmCanvas, 0, 0);
+      strokeCtx.globalCompositeOperation = 'destination-in';
+      strokeCtx.beginPath();
+      strokeCtx.lineWidth = radius * 2. - 1.;
+      strokeCtx.lineCap = "round";
+      strokeCtx.lineJoin = "round";
+      strokeCtx.strokeStyle = "rgba(255," + 0 + "," + 0 + ",255)";
+      strokeCtx.moveTo(path[0].x, path[0].y);
+      for (let index = 0; index < path.length; ++index) {
+        let point = path[index];
+        strokeCtx.lineTo(point.x, point.y);
+      }
+      strokeCtx.stroke();
+
+      // draw the stroke canvas multiple time with offset
+      // to have a Dilation effect before bluring
+      // So that after apply the blur filter, the edge of image will not become transparent
+      let expandedStrokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let expandedStrokeCtx = expandedStrokeCanvas.getContext('2d');
+      for (var i = blurRadius; i > 0; i--) { // From outter to inner
+        for (var j = -i; j < i; j++) {
+          // Draw the point on each of the edges (square)
+          expandedStrokeCtx.drawImage(strokeCanvas, -i, j);
+          expandedStrokeCtx.drawImage(strokeCanvas, j, i);
+          expandedStrokeCtx.drawImage(strokeCanvas, i, -j);
+          expandedStrokeCtx.drawImage(strokeCanvas, -j, -i);
+        }
+      }
+      expandedStrokeCtx.drawImage(strokeCanvas, 0, 0); // Center
+
+      // Blur canvas with padding
+      // transparent effect on the edge causing poor image in Chromium as dithering is enabled
       dmCtx.globalCompositeOperation = 'source-over';
       dmCtx.globalAlpha = 1;
-      dmCtx.filter = 'blur(4px)';
-      dmCtx.drawImage(blurCanvas, 0, 0);
+      dmCtx.filter = 'blur(' + blurRadius / 2 + 'px)';
+      dmCtx.drawImage(expandedStrokeCanvas, 0, 0);
+
+
+      // draw the strokeInverse canvas to the smooth brush doesn't bleed out of the stroke area
       dmCtx.filter = 'blur(0px)';
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.drawImage(strokeInverseCanvas, 0, 0);
     }
 
 
