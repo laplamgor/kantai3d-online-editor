@@ -448,7 +448,7 @@
       strokeInverseCtx.drawImage(dmCanvas, 0, 0);
       strokeInverseCtx.globalCompositeOperation = 'destination-out'; // eraser effect
       strokeInverseCtx.beginPath();
-      strokeInverseCtx.lineWidth = radius * 1.5 - 2;
+      strokeInverseCtx.lineWidth = radius * 2. - 1.;
       strokeInverseCtx.lineCap = "round";
       strokeInverseCtx.lineJoin = "round";
       strokeInverseCtx.strokeStyle = "rgba(0,0,0,255)";
@@ -465,30 +465,23 @@
       }
       strokeInverseCtx.putImageData(strokeInverseData, 0, 0);
 
-
       // Prepare the original image with only the stroke area
       let strokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let strokeCtx = strokeCanvas.getContext('2d');
       strokeCtx.drawImage(dmCanvas, 0, 0);
-      strokeCtx.globalCompositeOperation = 'destination-in';
-      strokeCtx.beginPath();
-      strokeCtx.lineWidth = radius * 2. - 1.;
-      strokeCtx.lineCap = "round";
-      strokeCtx.lineJoin = "round";
-      strokeCtx.strokeStyle = "rgba(255,0,0,255)";
-      strokeCtx.moveTo(path[0].x, path[0].y);
-      for (let index = 0; index < path.length; ++index) {
-        let point = path[index];
-        strokeCtx.lineTo(point.x, point.y);
+      let strokeData = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      var sdd = strokeData.data;
+      for (var i = 3; i < sdd.length; i += 4) {
+        sdd[i] = sidd[i] < 255 ? 255 : 0; // invert of strokeInverse
       }
-      strokeCtx.stroke();
+      strokeCtx.putImageData(strokeData, 0, 0);
 
       // draw the stroke canvas multiple time with offset
       // to have a Dilation effect before bluring
       // So that after apply the blur filter, the edge of image will not become transparent
       let expandedStrokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let expandedStrokeCtx = expandedStrokeCanvas.getContext('2d');
-      for (var i = blurRadius; i > 0; i--) { // From outter to inner
+      for (var i = blurRadius + 5; i > 0; i--) { // From outter to inner
         for (var j = -i; j < i; j++) {
           // Draw the point on each of the edges (square)
           expandedStrokeCtx.drawImage(strokeCanvas, -i, j);
@@ -501,16 +494,23 @@
 
       // Blur canvas with padding
       // transparent effect on the edge causing poor image in Chromium as dithering is enabled
-      dmCtx.globalCompositeOperation = 'source-over';
-      dmCtx.globalAlpha = 1;
-      dmCtx.filter = 'blur(' + blurRadius / 2 + 'px)';
-      dmCtx.drawImage(expandedStrokeCanvas, 0, 0);
+      strokeCtx.fillStyle = 'white';
+      strokeCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+      strokeCtx.globalCompositeOperation = 'source-over';
+      strokeCtx.globalAlpha = 1;
+      strokeCtx.filter = 'blur(' + blurRadius / 2 + 'px)';
+      strokeCtx.drawImage(expandedStrokeCanvas, 0, 0);
+      sdd = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height).data;
 
 
-      // draw the strokeInverse canvas to the smooth brush doesn't bleed out of the stroke area
-      dmCtx.filter = 'blur(0px)';
-      dmCtx.globalCompositeOperation = 'source-over';
-      dmCtx.drawImage(strokeInverseCanvas, 0, 0);
+      
+      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      var dmdd = dmData.data;
+      for (var i = 0; i < dmdd.length; i += 4) {
+        // let a = dmdd[i + 3];
+         dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // a, make it shape
+      }
+      dmCtx.putImageData(dmData, 0, 0);
     }
 
     function drawFlatLine(path, radius, depth, alpha) {
@@ -526,6 +526,8 @@
         dmCtx.lineTo(point.x, point.y);
       }
       dmCtx.stroke();
+
+      
     }
 
 
