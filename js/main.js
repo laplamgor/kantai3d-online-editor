@@ -431,10 +431,7 @@
       //   drawMaskedArea(strokes[i].mask);
       // }
 
-      updateMedianMask(10);
-      dmCtx.globalCompositeOperation = 'source-over';
-      dmCtx.globalAlpha = 1;
-      dmCtx.drawImage(maskCanvas, 0, 0);
+      updateMedianMask(1, strokes[strokes.length - 1].mask);
 
 
       dmTexture.update();
@@ -442,65 +439,39 @@
 
 
 
-    // Call this when the mask data changed 
-    // or user select another set of masks
-    function updateMedianMask(radius) {
+    function updateMedianMask(radius, newMasks) {
+      let blurCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
+      let maskCtx = blurCanvas.getContext('2d');
 
-      maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let maskCtx = maskCanvas.getContext('2d');
+
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.globalAlpha = 1;
+      dmCtx.drawImage(blurCanvas, 0, 0);
+      dmCtx.filter = '';
+
       let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
       var buf = new ArrayBuffer(dmData.data.length);
       var dmdd = dmData.data;
       var buf8 = new Uint8ClampedArray(buf);
 
 
-      // for (var i = 0; i < dmdd.length; i++) {
-      //   buf8[i] = dmdd[i]; // r
-      //   buf8[++i] = dmdd[i]; // g
-      //   let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
-      //   buf8[i] = dmdd[i]; // b
-      //   buf8[++i] = (masks & newMasks) > 0 ? 0 : 255; // a, if it match any given mask, opacity set to 1
-      // }
-
-      let w = dmData.width;
-      for (var x = 0; x < w; x++) {
-        for (var y = 0; y < dmData.height; y++) {
-          // collection array for median filter
-          var P = new Array();
-          var count = 0;
-
-          var imageIndex = (x + y * w) * 4;
-          buf8[imageIndex + 1] = dmdd[imageIndex + 1]; // G
-          buf8[imageIndex + 2] = dmdd[imageIndex + 2]; // B
-
-          // move with a little window over the image
-          for (var u = x - radius; u < x + radius + 1; u++) {
-            for (var v = y - radius; v < y + radius + 1; v++) {
-              // calculate the index of the sliding window
-              var windowIndex = (u + y * w) * 4;
-              // get the color values
-              var r = dmdd[windowIndex]; // R
-              // var g = dmdd[windowIndex + 1]; // G
-              // var b = dmdd[windowIndex + 2]; // B
-              // var a = dmdd[windowIndex + 3]; // A
-              // calculate the grey value and save it to the prepaired array
-              P[count] = r;
-              count++;
-            }
-          }
-          // sorting the array
-          P.sort();
-          
-          let mid = (count - 1  ) / 2;
-          buf8[imageIndex] = P[mid]; // R
-          // set the original alpha
-          buf8[imageIndex + 3] = 255;//dmdd[imageIndex + 3]; // A 
-        }
+      for (var i = 0; i < dmdd.length; i++) {
+        buf8[i] = dmdd[i]; // r
+        buf8[++i] = dmdd[i]; // g
+        let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
+        buf8[i] = dmdd[i]; // b
+        buf8[++i] = (masks & newMasks) > 0 ? 255 : 0; // a, if it match any given mask, opacity set to 1
       }
-
-
       dmData.data.set(buf8);
       maskCtx.putImageData(dmData, 0, 0);
+
+
+      
+      dmCtx.globalCompositeOperation = 'source-over';
+      dmCtx.globalAlpha = 1;
+      dmCtx.filter = 'blur(4px)';
+      dmCtx.drawImage(blurCanvas, 0, 0);
+      dmCtx.filter = 'blur(0px)';
     }
 
 
