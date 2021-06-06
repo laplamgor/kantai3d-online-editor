@@ -428,19 +428,16 @@
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
         updateMaskCanvas(strokes[i].mask);
         // drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
-        updateMedianMask(10, strokes[i].path, strokes[i].r1);
+        updateMedianMask(strokes[i].path, strokes[i].r1, 10);
         drawMaskedArea(strokes[i].mask);
-
       }
-
-
 
       dmTexture.update();
     }
 
 
 
-    function updateMedianMask(blurRadius, path, radius) {
+    function updateMedianMask(path, radius, blurRadius) {
       // Prepare the original image but earsed the stroke area
       // With very shape edge
       let strokeInverseCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
@@ -494,6 +491,7 @@
 
       // Blur canvas with padding
       // transparent effect on the edge causing poor image in Chromium as dithering is enabled
+      // p.s. reusing the strokeCtx object
       strokeCtx.fillStyle = 'white';
       strokeCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
       strokeCtx.globalCompositeOperation = 'source-over';
@@ -503,12 +501,11 @@
       sdd = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height).data;
 
 
-      
+
       let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
       var dmdd = dmData.data;
       for (var i = 0; i < dmdd.length; i += 4) {
-        // let a = dmdd[i + 3];
-         dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // a, make it shape
+        dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // copy from the blur canvas
       }
       dmCtx.putImageData(dmData, 0, 0);
     }
@@ -527,7 +524,7 @@
       }
       dmCtx.stroke();
 
-      
+
     }
 
 

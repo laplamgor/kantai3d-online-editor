@@ -35,39 +35,41 @@
     padding-top: 20px;
   ">
 
-    <ul class="uk-child-width-expand" data-uk-tab="{connect:'#my-id'}">
+    <ul class="uk-child-width-expand uk-padding-small" data-uk-tab="{connect:'#my-id'}">
       <li><a href="" uk-tooltip="File"><span uk-icon="icon: image"></span></a></li>
       <li><a href="" uk-tooltip="Paint"><span uk-icon="icon: pencil"></span></a></li>
-      <li><a href="" uk-tooltip="Effects"><span uk-icon="icon: bolt"></span></a></li>
+      <!-- <li><a href="" uk-tooltip="Effects"><span uk-icon="icon: bolt"></span></a></li> -->
       <li><a href="" uk-tooltip="Masks"><span uk-icon="icon: album"></span></a></li>
       <li><a href="" uk-tooltip="History"><span uk-icon="icon: history"></span></a></li>
       <li><a href="" uk-tooltip="About"><span uk-icon="icon: info"></span></a></li>
     </ul>
-    <ul id="my-id" class="uk-switcher uk-margin">
+    <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
       <li>
-        
-        <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-bottom" id="file-download-button">Download</button>
+
+        <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-bottom"
+          id="file-download-button">Download</button>
 
       </li>
 
       <li><a href="#" id="autoplayer" data-uk-switcher-item="next"></a>
         <form id="brush-form">
           <div class="range-slider">
-            <input class="range-slider" id="brush-inner-radius-slider" type="range" value="10" min="0" max="500">
+            <input class="range-slider uk-range" id="brush-inner-radius-slider" type="range" value="10" min="0"
+              max="500">
             <span class="range-slider-val">0</span>
           </div>
 
           <div class="range-slider">
-            <input class="range-slider" id="brush-outer-radius-slider" type="range" value="0" min="0" max="50">
+            <input class="range-slider uk-range" id="brush-outer-radius-slider" type="range" value="0" min="0" max="50">
             <span class="range-slider-val">0</span>
           </div>
 
           <div class="range-slider">
-            <input class="range-slider" id="brush-value-slider" type="range" value="1" min="1" max="255">
+            <input class="range-slider uk-range" id="brush-value-slider" type="range" value="1" min="1" max="255">
             <span class="range-slider-val">0</span>
           </div>
-          
+
         </form>
         <script>
           var slider = $('.range-slider'),
@@ -88,11 +90,11 @@
         </script>
 
       </li>
-      <li>Effects</li>
+      <!-- <li>Effects</li> -->
       <li>
         Masks
 
-        
+
         <div>
           <input class="uk-checkbox" type="checkbox" id="mask-select-all">
           <label for="car">Select All</label>
