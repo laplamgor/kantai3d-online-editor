@@ -8,6 +8,8 @@
   <link
     href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAJFBMVEUAAAAzM2YAAAD/zJkzMzP///9mZpkAAP//AABo7/v4v9j/mZnZKbxVAAAAAXRSTlMAQObYZgAAARFJREFUKM9tjr1twzAQhWVPkKMANmnM5zg9yTKVZApR2kAaQE1WMLyBoQWEbGC4C1J6uTz+GIGRfJCo08eHu6v+Yw3gTmAXWiRugW4IZOiwyWI3DqEbx/BeBMjIRBcMUuApsAUTQ2tUNAikTVYEmxQoQ0QLI0h3Ca0ZqfgPGK1gJMJEC9aT8ImouLeetFCYLKpn9tKpLokJtrYiXrxJ4kO21nupfV3E2tSewhObe5hAmnRksXo9LkvoT5e5EWTxeTyEfj6fG3EmirdlOez7y3yiEFAEso/HTci3945DXkSciuLx6hPXL3FgD+5UsIIkxLutj6+ksauYcACd/RUZq2BiU4UCt8K9eKiqKPiJlOqP+AED5UlXsyRHGQAAAABJRU5ErkJggg=="
     rel="icon" type="image/x-icon" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
   <title>Kantai3D editor</title>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -35,13 +37,12 @@
     padding-top: 20px;
   ">
 
-    <ul class="uk-child-width-expand uk-padding-small" data-uk-tab="{connect:'#my-id'}">
-      <li><a href="" uk-tooltip="File"><span uk-icon="icon: image"></span></a></li>
-      <li><a href="" uk-tooltip="Paint"><span uk-icon="icon: pencil"></span></a></li>
-      <!-- <li><a href="" uk-tooltip="Effects"><span uk-icon="icon: bolt"></span></a></li> -->
-      <li><a href="" uk-tooltip="Masks"><span uk-icon="icon: album"></span></a></li>
-      <li><a href="" uk-tooltip="History"><span uk-icon="icon: history"></span></a></li>
-      <li><a href="" uk-tooltip="About"><span uk-icon="icon: info"></span></a></li>
+    <ul class="uk-child-width-expand uk-padding-small uk-subnav uk-subnav-pill uk-text-center" uk-switcher>
+      <li><a href="" uk-tooltip="File"><i class="material-icons icon-align">photo_library</i></a></li>
+      <li><a href="" uk-tooltip="Paint"><i class="material-icons icon-align">edit</i></a></li>
+      <li><a href="" uk-tooltip="Masks"><i class="material-icons icon-align">layers</i></a></li>
+      <li><a href="" uk-tooltip="History"><i class="material-icons icon-align">history</i></a></li>
+      <li><a href="" uk-tooltip="About"><i class="material-icons icon-align">info</i></a></li>
     </ul>
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
@@ -49,28 +50,76 @@
 
         <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-bottom"
           id="file-download-button">Download</button>
-
       </li>
 
-      <li><a href="#" id="autoplayer" data-uk-switcher-item="next"></a>
-        <form id="brush-form">
-          <div class="range-slider">
-            <input class="range-slider uk-range" id="brush-inner-radius-slider" type="range" value="10" min="0"
-              max="500">
-            <span class="range-slider-val">0</span>
-          </div>
+      <!-- Brush page -->
+      <li>
+        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher>
+          <li><a href="#" uk-tooltip="Brsuh"><i class="material-icons icon-align">brush</i></a></li>
+          <li><a href="#" uk-tooltip="Flat"><i class="material-icons icon-align">format_paint</i></a></li>
+          <li><a href="#" uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
+        </ul>
 
-          <div class="range-slider">
-            <input class="range-slider uk-range" id="brush-outer-radius-slider" type="range" value="0" min="0" max="50">
-            <span class="range-slider-val">0</span>
-          </div>
+        <ul class="uk-switcher uk-margin">
+          <li>
+            <form id="brush-form">
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-inner-radius-slider" type="range" value="10" min="0"
+                  max="500">
+                <span class="range-slider-val">0</span>
+              </div>
 
-          <div class="range-slider">
-            <input class="range-slider uk-range" id="brush-value-slider" type="range" value="1" min="1" max="255">
-            <span class="range-slider-val">0</span>
-          </div>
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-outer-radius-slider" type="range" value="0" min="0"
+                  max="50">
+                <span class="range-slider-val">0</span>
+              </div>
 
-        </form>
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-value-slider" type="range" value="1" min="1" max="255">
+                <span class="range-slider-val">0</span>
+              </div>
+
+            </form>
+          </li>
+          <li>
+            <form id="brush-form">
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-inner-radius-slider" type="range" value="10" min="0"
+                  max="500">
+                <span class="range-slider-val">0</span>
+              </div>
+    
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-outer-radius-slider" type="range" value="0" min="0" max="50">
+                <span class="range-slider-val">0</span>
+              </div>
+    
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-value-slider" type="range" value="1" min="1" max="255">
+                <span class="range-slider-val">0</span>
+              </div>
+    
+            </form>
+          </li>
+          <li>
+            <form id="brush-form">
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-inner-radius-slider" type="range" value="10" min="0"
+                  max="500">
+                <span class="range-slider-val">0</span>
+              </div>
+    
+              <div class="range-slider">
+                <input class="range-slider uk-range" id="brush-outer-radius-slider" type="range" value="0" min="0" max="50">
+                <span class="range-slider-val">0</span>
+              </div>
+            </form>
+          </li>
+        </ul>
+
+
+
         <script>
           var slider = $('.range-slider'),
             range = $('.range-slider'),
@@ -88,9 +137,9 @@
             });
           });
         </script>
-
       </li>
-      <!-- <li>Effects</li> -->
+
+
       <li>
         Masks
 
