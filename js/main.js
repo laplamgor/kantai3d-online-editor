@@ -361,13 +361,13 @@
       }
     }
 
-
     function startDrawing() {
       if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
-        strokes.push({ path: [], mask: 65535 });
+        strokes.push({ path: [], mask: 65535, brushId: 0 });
       }
-      strokes[strokes.length - 1].r1 = parseInt(document.getElementById('brush-inner-radius-slider').value);
-      strokes[strokes.length - 1].r2 = parseInt(document.getElementById('brush-outer-radius-slider').value);
+      strokes[strokes.length - 1].brushId = brushId;
+      strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+      strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
       isDrawing = true;
     }
 
@@ -427,8 +427,20 @@
       // Draw all steps
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
         updateMaskCanvas(strokes[i].mask);
-        // drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
-        updateMedianMask(strokes[i].path, strokes[i].r1, 10);
+
+        switch (strokes[i].brushId) {
+          default:
+          case 0:
+            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
+            break;
+          case 1:
+            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, true);
+            break;
+          case 2:
+            updateMedianMask(strokes[i].path, strokes[i].r1, 10);
+            break; f
+        }
+
         drawMaskedArea(strokes[i].mask);
       }
 
@@ -790,6 +802,12 @@
       link.href = dmCanvas.toDataURL('image/png');
       link.click();
       link.delete;
+    });
+
+
+    let brushId = 0;
+    document.getElementById('brush-switcher').addEventListener("beforeshow", function (e) {
+      brushId = e.detail[0].index();
     });
 
   }
