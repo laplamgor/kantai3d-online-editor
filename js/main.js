@@ -364,6 +364,7 @@
     function startDrawing() {
       if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
         strokes.push({ path: [], mask: 65535, brushId: 0 });
+        document.getElementById('undo-button').disabled = strokes.length == 0;
       }
       strokes[strokes.length - 1].brushId = brushId;
 
@@ -439,8 +440,9 @@
         dmCtx.drawImage(dmImage, 0, 0);
       }
 
-      strokes[strokes.length - 1].mask = getCurrentMaskSelected();
-
+      if (strokes.length > 0) {
+        strokes[strokes.length - 1].mask = getCurrentMaskSelected();
+      }
 
       // Draw all steps
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
@@ -814,6 +816,22 @@
     let penFlip = 1;
     document.getElementById('pen-flip-switcher').addEventListener("show", function (e) {
       penFlip = 1 - e.detail[0].index() * 2; // 1 or -1
+    });
+
+    
+    let redoList = []
+    document.getElementById('undo-button').addEventListener("click", function (e) {
+      redoList.push(strokes.pop());
+      redraw();
+      document.getElementById('undo-button').disabled = strokes.length == 0;
+      document.getElementById('redo-button').disabled = false;
+    });
+    
+    document.getElementById('redo-button').addEventListener("click", function (e) {
+      strokes.push(redoList.pop());
+      redraw()
+      document.getElementById('undo-button').disabled = false;
+      document.getElementById('redo-button').disabled = redoList.length == 0;
     });
   }
 
