@@ -54,7 +54,7 @@
 
       <!-- Brush page -->
       <li>
-        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher>
+        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher="connect: #brush-switcher">
           <li><a href="#" uk-tooltip="Pen"><i class="material-icons icon-align">brush</i></a></li>
           <li><a href="#" uk-tooltip="Roller"><i class="material-icons icon-align">format_paint</i></a></li>
           <li><a href="#" uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
@@ -63,63 +63,77 @@
         <ul class="uk-switcher uk-margin" id="brush-switcher">
           <li>
             <form id="pen-form">
+              Brush Size
               <div class="range-slider">
                 <input class="range-slider uk-range" id="pen-inner-radius-slider" type="range" value="10" min="0"
-                  max="500">
-                <span class="range-slider-val">0</span>
+                  max="200">
+                <span class="range-slider-val">10</span>
               </div>
 
+              Brush Size Extend
               <div class="range-slider">
                 <input class="range-slider uk-range" id="pen-outer-radius-slider" type="range" value="0" min="0"
                   max="50">
                 <span class="range-slider-val">0</span>
               </div>
 
+
+              <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher="connect: #pen-flip-switcher">
+                <li><a href="#" uk-tooltip="Convex"><i class="material-icons icon-align">wb_twilight</i></a></li>
+                <li><a href="#" uk-tooltip="Concave"><i class="material-icons icon-align">upcoming</i></a></li>
+              </ul>
+
+              Depth Value
               <div class="range-slider">
-                <input class="range-slider uk-range" id="pen-value-slider" type="range" value="1" min="1" max="255">
-                <span class="range-slider-val">0</span>
+                <input class="range-slider uk-range" id="pen-value-slider" type="range" value="1" min="1" max="10">
+                <span class="range-slider-val">1</span>
               </div>
+
+                    
 
             </form>
           </li>
           <li>
             <form id="roller-form">
+              Brush Size
               <div class="range-slider">
                 <input class="range-slider uk-range" id="roller-inner-radius-slider" type="range" value="10" min="0"
                   max="500">
                 <span class="range-slider-val">0</span>
               </div>
 
+              Depth Value
               <div class="range-slider">
-                <input class="range-slider uk-range" id="roller-outer-radius-slider" type="range" value="0" min="0"
-                  max="50">
-                <span class="range-slider-val">0</span>
-              </div>
-
-              <div class="range-slider">
-                <input class="range-slider uk-range" id="roller-value-slider" type="range" value="1" min="1" max="255">
-                <span class="range-slider-val">0</span>
+                <input class="range-slider uk-range" id="roller-value-slider" type="range" value="127" min="0" max="255">
+                <span class="range-slider-val">128</span>
               </div>
 
             </form>
           </li>
           <li>
             <form id="smooth-form">
+              Brush size
               <div class="range-slider">
-                <input class="range-slider uk-range" id="smooth-inner-radius-slider" type="range" value="10" min="0"
-                  max="500">
-                <span class="range-slider-val">0</span>
+                <input class="range-slider uk-range" id="smooth-inner-radius-slider" type="range" value="10" min="1"
+                  max="200">
+                <span class="range-slider-val">10</span>
               </div>
 
+              Smoothness
               <div class="range-slider">
-                <input class="range-slider uk-range" id="smooth-outer-radius-slider" type="range" value="0" min="0"
-                  max="50">
-                <span class="range-slider-val">0</span>
+                <input class="range-slider uk-range" id="smooth-value-slider" type="range" value="5" min="1"
+                  max="20">
+                <span class="range-slider-val">5</span>
               </div>
             </form>
           </li>
         </ul>
 
+
+        <ul class="uk-switcher uk-margin" id="pen-flip-switcher">
+          <li></li>
+          <li></li>
+        </ul>
 
 
         <script>

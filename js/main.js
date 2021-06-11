@@ -366,8 +366,26 @@
         strokes.push({ path: [], mask: 65535, brushId: 0 });
       }
       strokes[strokes.length - 1].brushId = brushId;
-      strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
-      strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
+
+      switch (brushId) {
+        default:
+        case 0:
+          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+          strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
+          strokes[strokes.length - 1].value = parseInt(document.getElementById('pen-value-slider').value) * penFlip;
+          break;
+        case 1:
+          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('roller-inner-radius-slider').value);
+          strokes[strokes.length - 1].value = parseInt(document.getElementById('roller-value-slider').value);
+          break;
+        case 2:
+          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('smooth-inner-radius-slider').value);
+          strokes[strokes.length - 1].value = parseInt(document.getElementById('smooth-value-slider').value);
+          break; f
+      }
+
+
+
       isDrawing = true;
     }
 
@@ -431,13 +449,13 @@
         switch (strokes[i].brushId) {
           default:
           case 0:
-            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, false);
+            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, strokes[i].value, false);
             break;
           case 1:
-            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, 1, true);
+            drawSmoothLine(strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
             break;
           case 2:
-            updateMedianMask(strokes[i].path, strokes[i].r1, 10);
+            updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
             break; f
         }
 
@@ -520,23 +538,6 @@
         dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // copy from the blur canvas
       }
       dmCtx.putImageData(dmData, 0, 0);
-    }
-
-    function drawFlatLine(path, radius, depth, alpha) {
-      dmCtx.beginPath();
-      dmCtx.lineWidth = radius * 2. - 1.;
-      dmCtx.lineCap = "round";
-      dmCtx.lineJoin = "round";
-      dmCtx.strokeStyle = "rgba(" + depth + "," + 0 + "," + 0 + "," + alpha + ")";
-      dmCtx.moveTo(path[0].x, path[0].y);
-
-      for (let index = 0; index < path.length; ++index) {
-        let point = path[index];
-        dmCtx.lineTo(point.x, point.y);
-      }
-      dmCtx.stroke();
-
-
     }
 
 
@@ -806,10 +807,14 @@
 
 
     let brushId = 0;
-    document.getElementById('brush-switcher').addEventListener("beforeshow", function (e) {
+    document.getElementById('brush-switcher').addEventListener("show", function (e) {
       brushId = e.detail[0].index();
     });
 
+    let penFlip = 1;
+    document.getElementById('pen-flip-switcher').addEventListener("show", function (e) {
+      penFlip = 1 - e.detail[0].index() * 2; // 1 or -1
+    });
   }
 
 
