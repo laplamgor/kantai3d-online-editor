@@ -38,7 +38,7 @@
       window.displacementFilter.uniforms.textureSize = [bmImage.width, bmImage.height];
       window.displacementFilter.uniforms.textureScale = 1.0;
 
-      
+
       refreshMaskListPanel();
     }
     bmImage.src = bmPath;
@@ -63,7 +63,7 @@
       window.displacementFilter.uniforms.displacementMap = dmTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
 
-      
+
       refreshMaskListPanel();
     }
     dmImage.src = dmPath;
@@ -595,15 +595,14 @@
     let maskCanvas;
 
     function getCurrentMaskSelected() {
-      let newMasks = 0;
-      if (document.getElementById('mask-select-all').checked) {
-        return 65535;
-      }
-      for (var i = 0; i < 8; i++) {
+      let newMasks = { length: 0 };
+      for (var i = 0; i < 255; i++) {
         var checkbox = document.getElementById('mask-' + i);
-        newMasks = (newMasks << 1) + (checkbox.checked ? 1 : 0);
+        if (!checkbox || checkbox.checked) {
+          newMasks[i] = 1;
+          newMasks.length = newMasks.length + 1;
+        }
       }
-      newMasks = newMasks << 8;
       return newMasks;
     }
 
@@ -611,14 +610,9 @@
     // Call this when the mask data changed 
     // or user select another set of masks
     function updateMaskCanvas(newMasks) {
-      if (newMasks == 65535) {
+      if (newMasks.length == 255) {
         return; // For select-all mask -> dont need to build the mask area
       }
-      // if (currentMasks == newMasks) {
-      //   // Mask selection not updated
-      //   return;
-      // }
-      // currentStroke.mask = newMasks;
 
       maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let maskCtx = maskCanvas.getContext('2d');
@@ -630,10 +624,10 @@
 
       for (let i = 0; i < dmdd.length; i++) {
         buf8[i] = dmdd[i]; // r
-        buf8[++i] = dmdd[i]; // g
-        let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
-        buf8[i] = dmdd[i]; // b
-        buf8[++i] = (masks & newMasks) > 0 ? 0 : 255; // a, if it match any given mask, opacity set to 1
+        let mask = dmdd[++i]; // g + b channels are storing the mask data
+        buf8[i] = dmdd[i]; // g
+        buf8[++i] = dmdd[i]; // b
+        buf8[++i] = newMasks[mask] == 1 ? 0 : 255; // a, if it match any given mask, opacity set to 1
       }
 
       dmData.data.set(buf8);
@@ -642,7 +636,7 @@
 
 
     function drawMaskedArea(mask) {
-      if (maskCanvas && mask != 65535) {
+      if (maskCanvas && mask.length != 255) {
         // Draw the original image on the masked area
         // Leaving the changes only on the unmasked area
         dmCtx.globalCompositeOperation = 'source-over';
@@ -798,28 +792,28 @@
     }
 
 
-    const set1 = new Map();
     function refreshMaskListPanel() {
-    if (!bmImage.width || !dmCtx || !bmImageData) {
-      return;
-    }
+      if (!bmImage.width || !dmCtx || !bmImageData) {
+        return;
+      }
 
+      let set1 = new Map();
       let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
       var dmdd = dmImageData.data;
       let bmdd = bmImageData.data;
 
 
-      // for (var j = 0; j < dmdd.length; j+=4) {
-      //   let maskId = dmdd[j + 1];
-      //   set1.set(maskId, maskId);
-      //   bmdd[j + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
-      //   bmdd[j + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
-      //   bmdd[j + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
-      //   bmdd[j + 3] = 255; // a, if it match any given mask, opacity set to 1
-      // }
+      for (var j = 0; j < dmdd.length; j += 4) {
+        let maskId = dmdd[j + 1];
+        set1.set(maskId, maskId);
+        // bmdd[j + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
+        // bmdd[j + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
+        // bmdd[j + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
+        // bmdd[j + 3] = 255; // a, if it match any given mask, opacity set to 1
+      }
 
 
-          
+
       let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       const tmCtx = tempCanvas.getContext('2d');
 
@@ -828,50 +822,43 @@
       for (const [maskId, value] of set1.entries()) {
         var li = document.createElement('li');
 
-          
+
+        // Create thumbnail
         // Draw the canvas
         let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
         var tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
         tmCtx.fillStyle = 'white';
         tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
-        for (var j = 3; j < dmdd.length; j+=4) {
+        for (var j = 3; j < dmdd.length; j += 4) {
           tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
         }
         tmCtx.putImageData(tmImageData, 0, 0);
-
         tmCtx.globalCompositeOperation = 'source-in';
         tmCtx.drawImage(bmCanvas, 0, 0);
         var tmdd = tmImageData.data;
-
-
-
-
-
-
         let liCanvas = document.createElement("CANVAS");
         liCanvas.width = 100;
         liCanvas.height = 100;
         const ctx = liCanvas.getContext('2d');
         ctx.drawImage(tempCanvas, 0, 0, 100, 100);
 
-        
+        // Create checkbox
         let input = document.createElement("input");
-
         input.type = 'checkbox';
-        // input.id = 'mask-' + maskId;
+        input.classList.add("uk-checkbox");
+        input.id = 'mask-' + maskId;
+        input.name = 'mask-checkbox';
+
         li.appendChild(input);
         li.appendChild(liCanvas);
-
-        
-
         maskList.appendChild(li);
       }
 
       bmTexture.update();
       redraw();
     }
-    
+
 
     document.getElementById('mask-select-all').onclick = function () {
       var checkboxes = document.getElementsByName('mask-checkbox');
@@ -901,7 +888,7 @@
       penFlip = 1 - e.detail[0].index() * 2; // 1 or -1
     });
 
-    
+
     let redoList = []
     document.getElementById('undo-button').addEventListener("click", function (e) {
       redoList.push(strokes.pop());
@@ -909,7 +896,7 @@
       document.getElementById('undo-button').disabled = strokes.length == 0;
       document.getElementById('redo-button').disabled = false;
     });
-    
+
     document.getElementById('redo-button').addEventListener("click", function (e) {
       strokes.push(redoList.pop());
       redraw()
