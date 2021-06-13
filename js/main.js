@@ -416,8 +416,7 @@
         cacheBaseMap = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
         cacheCtx = cacheBaseMap.getContext('2d');
       }
-      cacheCtx.fillStyle = 'white';
-      cacheCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+      cacheCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
       cacheCtx.drawImage(dmCanvas, 0, 0);
       cacheBaseMapHistoryIndex = strokes.length - 1;
     }
@@ -533,8 +532,7 @@
       // Blur canvas with padding
       // transparent effect on the edge causing poor image in Chromium as dithering is enabled
       // p.s. reusing the strokeCtx object
-      strokeCtx.fillStyle = 'white';
-      strokeCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+      strokeCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
       strokeCtx.globalCompositeOperation = 'source-over';
       strokeCtx.globalAlpha = 1;
       strokeCtx.filter = 'blur(' + blurRadius / 2 + 'px)';
@@ -649,8 +647,7 @@
     function invert() {
       dmCtx.globalAlpha = 1;
       dmCtx.globalCompositeOperation = 'difference';
-      dmCtx.fillStyle = 'white';
-      dmCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+      dmCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
     }
 
     function drawFlatLine(path, radius, depth, alpha) {
@@ -828,8 +825,7 @@
         let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
         var tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
-        tmCtx.fillStyle = 'white';
-        tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
+        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
         for (var j = 3; j < dmdd.length; j += 4) {
           tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
         }
@@ -849,6 +845,7 @@
         input.classList.add("uk-checkbox");
         input.id = 'mask-' + maskId;
         input.name = 'mask-checkbox';
+        input.checked = true;
 
         li.appendChild(input);
         li.appendChild(liCanvas);
