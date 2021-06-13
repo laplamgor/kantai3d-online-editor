@@ -25,7 +25,6 @@
   <script src="https://code.jquery.com/jquery-2.0.2.min.js"></script>
   <script src="https://pixijs.download/v5.3.8/pixi.min.js"></script>
 
-
   <div style="
     height: 100%; 
     width: 320px;
@@ -34,15 +33,19 @@
     top: 0;
     left: 0;
     overflow-x: hidden;
-    padding-top: 20px;
+    overflow-y: overlay;
   ">
-
-    <ul class="uk-child-width-expand uk-tab uk-text-center" uk-switcher>
-      <li><a href="" uk-tooltip="File"><i class="material-icons icon-align">photo_library</i></a></li>
-      <li><a href="" uk-tooltip="Paint"><i class="material-icons icon-align">edit</i></a></li>
-      <li><a href="" uk-tooltip="Masks"><i class="material-icons icon-align">layers</i></a></li>
-      <li><a href="" uk-tooltip="History"><i class="material-icons icon-align">history</i></a></li>
-      <li><a href="" uk-tooltip="About"><i class="material-icons icon-align">info</i></a></li>
+    <style>
+      .uk-tab::before {
+        left: 0
+      }
+    </style>
+    <ul class="uk-child-width-expand uk-tab uk-margin-remove uk-background-muted" uk-switcher uk-sticky="offset: 0">
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="File"><i class="material-icons icon-align">photo_library</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Paint"><i class="material-icons icon-align">edit</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Masks"><i class="material-icons icon-align">layers</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="History"><i class="material-icons icon-align">history</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="About"><i class="material-icons icon-align">info</i></a></li>
     </ul>
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
@@ -54,7 +57,8 @@
 
       <!-- Brush page -->
       <li>
-        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher="connect: #brush-switcher">
+        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
+          uk-switcher="connect: #brush-switcher">
           <li><a href="#" uk-tooltip="Pen"><i class="material-icons icon-align">brush</i></a></li>
           <li><a href="#" uk-tooltip="Roller"><i class="material-icons icon-align">format_paint</i></a></li>
           <li><a href="#" uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
@@ -78,7 +82,8 @@
               </div>
 
 
-              <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center" uk-switcher="connect: #pen-flip-switcher">
+              <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
+                uk-switcher="connect: #pen-flip-switcher">
                 <li><a href="#" uk-tooltip="Convex"><i class="material-icons icon-align">wb_twilight</i></a></li>
                 <li><a href="#" uk-tooltip="Concave"><i class="material-icons icon-align">upcoming</i></a></li>
               </ul>
@@ -89,7 +94,7 @@
                 <span class="range-slider-val">1</span>
               </div>
 
-                    
+
 
             </form>
           </li>
@@ -104,7 +109,8 @@
 
               Depth Value
               <div class="range-slider">
-                <input class="range-slider uk-range" id="roller-value-slider" type="range" value="127" min="0" max="255">
+                <input class="range-slider uk-range" id="roller-value-slider" type="range" value="127" min="0"
+                  max="255">
                 <span class="range-slider-val">128</span>
               </div>
 
@@ -121,8 +127,7 @@
 
               Smoothness
               <div class="range-slider">
-                <input class="range-slider uk-range" id="smooth-value-slider" type="range" value="5" min="1"
-                  max="20">
+                <input class="range-slider uk-range" id="smooth-value-slider" type="range" value="5" min="1" max="20">
                 <span class="range-slider-val">5</span>
               </div>
             </form>
@@ -159,8 +164,12 @@
       <li>
         Masks
         <div>
-          <button class="uk-button uk-button-default" id="happy-button">Happy</button>
-
+          <ul class="uk-list uk-list-collapse uk-list-striped" id="mask-list">
+            <li>
+              <input class="uk-checkbox" type="checkbox" checked>
+              <canvas width="100" height="100">
+            </li>
+          </ul>
         </div>
 
         <div>

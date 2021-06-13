@@ -16,16 +16,17 @@
     // Load base map as buffer
     var bmImageData;
     var bmPath = './f2152.png';
+    let bmCanvas;
     var bmImage = new Image();
     let bmTexture = PIXI.Texture.EMPTY;
     bmImage.onload = function () {
-      let tempCanvas = document.createElement("CANVAS");;
-      tempCanvas.width = bmImage.width;
-      tempCanvas.height = bmImage.height;
-      const ctx = tempCanvas.getContext('2d');
+      bmCanvas = document.createElement("CANVAS");;
+      bmCanvas.width = bmImage.width;
+      bmCanvas.height = bmImage.height;
+      const ctx = bmCanvas.getContext('2d');
       ctx.drawImage(bmImage, 0, 0);
 
-      bmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+      bmImageData = ctx.getImageData(0, 0, bmCanvas.width, bmCanvas.height);
 
       bmTexture = PIXI.Texture.fromBuffer(bmImageData.data, bmImage.width, bmImage.height);
       depthMapImage.texture = bmTexture;
@@ -36,6 +37,9 @@
       window.displacementFilter.uniforms.textureHeight = bmImage.height;
       window.displacementFilter.uniforms.textureSize = [bmImage.width, bmImage.height];
       window.displacementFilter.uniforms.textureScale = 1.0;
+
+      
+      refreshMaskListPanel();
     }
     bmImage.src = bmPath;
 
@@ -58,6 +62,9 @@
       dmTexture = PIXI.Texture.from(dmCanvas);
       window.displacementFilter.uniforms.displacementMap = dmTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
+
+      
+      refreshMaskListPanel();
     }
     dmImage.src = dmPath;
 
@@ -616,12 +623,12 @@
       maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let maskCtx = maskCanvas.getContext('2d');
       let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      var buf = new ArrayBuffer(dmData.data.length);
-      var dmdd = dmData.data;
-      var buf8 = new Uint8ClampedArray(buf);
+      let buf = new ArrayBuffer(dmData.data.length);
+      let dmdd = dmData.data;
+      let buf8 = new Uint8ClampedArray(buf);
 
 
-      for (var i = 0; i < dmdd.length; i++) {
+      for (let i = 0; i < dmdd.length; i++) {
         buf8[i] = dmdd[i]; // r
         buf8[++i] = dmdd[i]; // g
         let masks = (dmdd[i] << 8) + dmdd[++i]; // g + b channels are storing the mask data
@@ -791,49 +798,80 @@
     }
 
 
+    const set1 = new Map();
+    function refreshMaskListPanel() {
+    if (!bmImage.width || !dmCtx || !bmImageData) {
+      return;
+    }
 
-
-    const set1 = new Set([]);
-    document.getElementById('happy-button').addEventListener("click", function (e) {
-      
-      //
       let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
       var dmdd = dmImageData.data;
-
       let bmdd = bmImageData.data;
 
-      
-      var buf = new ArrayBuffer(dmImageData.data.length);
-      var buf8 = new Uint8ClampedArray(buf);
+
+      // for (var j = 0; j < dmdd.length; j+=4) {
+      //   let maskId = dmdd[j + 1];
+      //   set1.set(maskId, maskId);
+      //   bmdd[j + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
+      //   bmdd[j + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
+      //   bmdd[j + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
+      //   bmdd[j + 3] = 255; // a, if it match any given mask, opacity set to 1
+      // }
 
 
-      for (var i = 0; i < dmdd.length; i+=4) {
-        let maskId = dmdd[i + 1];
-        set1.add(maskId);
-        bmdd[i + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
-        bmdd[i + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
-        bmdd[i + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
-        bmdd[i + 3] = 255; // a, if it match any given mask, opacity set to 1
+          
+      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+      const tmCtx = tempCanvas.getContext('2d');
+
+      let maskList = document.getElementById('mask-list');
+      maskList.replaceChildren();
+      for (const [maskId, value] of set1.entries()) {
+        var li = document.createElement('li');
+
+          
+        // Draw the canvas
+        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        var tmdd = tmImageData.data;
+        tmCtx.globalCompositeOperation = 'source-over';
+        tmCtx.fillStyle = 'white';
+        tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
+        for (var j = 3; j < dmdd.length; j+=4) {
+          tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
+        }
+        tmCtx.putImageData(tmImageData, 0, 0);
+
+        tmCtx.globalCompositeOperation = 'source-in';
+        tmCtx.drawImage(bmCanvas, 0, 0);
+        var tmdd = tmImageData.data;
+
+
+
+
+
+
+        let liCanvas = document.createElement("CANVAS");
+        liCanvas.width = 100;
+        liCanvas.height = 100;
+        const ctx = liCanvas.getContext('2d');
+        ctx.drawImage(tempCanvas, 0, 0, 100, 100);
+
+        
+        let input = document.createElement("input");
+
+        input.type = 'checkbox';
+        // input.id = 'mask-' + maskId;
+        li.appendChild(input);
+        li.appendChild(liCanvas);
+
+        
+
+        maskList.appendChild(li);
       }
 
       bmTexture.update();
-      //
-
-      // let texture = PIXI.Texture.fromBuffer(buf8, bmImage.width, bmImage.height);
-      // depthMapImage.texture = texture;
-      // depthMapImage2.texture = texture;
-      // needUpdateReverseMapBuffer = true;
-
-      redraw()
-    });
+      redraw();
+    }
     
-
-
-
-
-
-
-
 
     document.getElementById('mask-select-all').onclick = function () {
       var checkboxes = document.getElementsByName('mask-checkbox');
