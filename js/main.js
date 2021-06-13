@@ -17,17 +17,19 @@
     var bmImageData;
     var bmPath = './f2152.png';
     var bmImage = new Image();
+    let bmTexture = PIXI.Texture.EMPTY;
     bmImage.onload = function () {
       let tempCanvas = document.createElement("CANVAS");;
       tempCanvas.width = bmImage.width;
       tempCanvas.height = bmImage.height;
       const ctx = tempCanvas.getContext('2d');
       ctx.drawImage(bmImage, 0, 0);
+
       bmImageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
 
-      let texture = PIXI.Texture.fromBuffer(bmImageData.data, bmImage.width, bmImage.height);
-      depthMapImage.texture = texture;
-      depthMapImage2.texture = texture;
+      bmTexture = PIXI.Texture.fromBuffer(bmImageData.data, bmImage.width, bmImage.height);
+      depthMapImage.texture = bmTexture;
+      depthMapImage2.texture = bmTexture;
       needUpdateReverseMapBuffer = true;
 
       window.displacementFilter.uniforms.textureWidth = bmImage.width;
@@ -787,6 +789,49 @@
 
       return webglPixels;
     }
+
+
+
+
+    const set1 = new Set([]);
+    document.getElementById('happy-button').addEventListener("click", function (e) {
+      
+      //
+      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      var dmdd = dmImageData.data;
+
+      let bmdd = bmImageData.data;
+
+      
+      var buf = new ArrayBuffer(dmImageData.data.length);
+      var buf8 = new Uint8ClampedArray(buf);
+
+
+      for (var i = 0; i < dmdd.length; i+=4) {
+        let maskId = dmdd[i + 1];
+        set1.add(maskId);
+        bmdd[i + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
+        bmdd[i + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
+        bmdd[i + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
+        bmdd[i + 3] = 255; // a, if it match any given mask, opacity set to 1
+      }
+
+      bmTexture.update();
+      //
+
+      // let texture = PIXI.Texture.fromBuffer(buf8, bmImage.width, bmImage.height);
+      // depthMapImage.texture = texture;
+      // depthMapImage2.texture = texture;
+      // needUpdateReverseMapBuffer = true;
+
+      redraw()
+    });
+    
+
+
+
+
+
 
 
 
