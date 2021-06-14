@@ -791,6 +791,16 @@
     }
 
 
+    const maskColor = {};
+    for (let i = 0; i < 256; i++) {
+      let color = {};
+      color.r = 255 - ((i & 0b01000000) << 1) - ((i & 0b00001000) << 3) - ((i & 0b00000001) << 5); // r
+      color.g = 255 - ((i & 0b10000000) << 0) - ((i & 0b00010000) << 2) - ((i & 0b00000010) << 4); // g
+      color.b = 255 - ((i & 0b00100000) << 2) - ((i & 0b00000100) << 4) - 0b00100000; // b
+      maskColor[i] = color;
+    }
+
+
     function refreshMaskListPanel() {
       if (!bmImage.width || !dmCtx || !bmImageData) {
         return;
@@ -814,6 +824,8 @@
       maskList.replaceChildren();
       for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
         let li = document.createElement('li');
+        li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g  + "," + maskColor[maskId].b  + "," + 0.5 + ")";;
+
 
         // Create thumbnail
         // Draw the temp canvas
@@ -876,9 +888,10 @@
 
         for (var i = 0; i < dmdd.length; i += 4) {
           let maskId = dmdd[i + 1];
-          tmdd[i + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
-          tmdd[i + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
-          tmdd[i + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
+          let color = maskColor[maskId];
+          tmdd[i + 0] = color.r; // r
+          tmdd[i + 1] = color.g; // g
+          tmdd[i + 2] = color.b; // b
           tmdd[i + 3] = maskId == maskEditingId ? 0 : 192; // a
         }
         tmCtx.putImageData(tmImageData, 0, 0);
@@ -911,8 +924,6 @@
 
       bmTexture.update();
     }
-
-
 
     function drawMaskLine(path, radius, value) {
       let depth;
