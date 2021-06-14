@@ -10,14 +10,14 @@
       }
     );
 
-    var curOnTexX = 0;
-    var curOnTexY = 0;
+    let curOnTexX = 0;
+    let curOnTexY = 0;
 
     // Load base map as buffer
-    var bmImageData;
-    var bmPath = './f2152.png';
+    let bmImageData;
+    let bmPath = './f2152.png';
     let bmCanvas;
-    var bmImage = new Image();
+    let bmImage = new Image();
     let bmTexture = PIXI.Texture.EMPTY;
     bmImage.onload = function () {
       bmCanvas = document.createElement("CANVAS");;
@@ -47,8 +47,8 @@
     // Load depth map as buffer
     let dmCanvas;
     let dmCtx;
-    var dmPath = './f2152_depth.png';
-    var dmImage = new Image();
+    let dmPath = './f2152_depth.png';
+    let dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
     dmImage.onload = function () {
       dmCanvas = document.createElement("CANVAS");
@@ -70,8 +70,8 @@
 
 
 
-    var reverseMapBuffer;
-    var needUpdateReverseMapBuffer = true;
+    let reverseMapBuffer;
+    let needUpdateReverseMapBuffer = true;
 
     PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY });
@@ -117,8 +117,8 @@
       filterManager.applyFilter(this, input, output);
     }
 
-    var depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
-    var depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    let depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    let depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
@@ -132,8 +132,8 @@
     window.displacementFilter.uniforms.displayMode = 2;
 
 
-    var container = new PIXI.Container();
-    var cursorSpirte = new PIXI.Sprite(PIXI.Texture.WHITE);
+    let container = new PIXI.Container();
+    let cursorSpirte = new PIXI.Sprite(PIXI.Texture.WHITE);
     cursorSpirte.anchor.set(0.5);
     container.filters = [window.displacementFilter];
     container.addChild(depthMapImage);
@@ -142,7 +142,7 @@
 
     window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
 
-    var containerReverseMap = new PIXI.Container();
+    let containerReverseMap = new PIXI.Container();
     container.addChild(cursorSpirte);
     containerReverseMap.filters = [window.offsetFilter];
     containerReverseMap.addChild(depthMapImage2);
@@ -153,28 +153,26 @@
     app.stage.addChild(container);
 
 
-    var tiltX;
-    var tiltY;
-    var isTilting = false;
+    let tiltX;
+    let tiltY;
+    let isTilting = false;
 
-    var panX;
-    var panY;
-    var isPanning = false;
+    let panX;
+    let panY;
+    let isPanning = false;
 
-    var isDrawing = false;
+    let isDrawing = false;
 
     $('#canvas').bind('mousedown', function (event) {
       switch (event.button) {
         case 2:
           tiltX = app.renderer.plugins.interaction.mouse.global.x;
           tiltY = app.renderer.plugins.interaction.mouse.global.y;
-          console.log('case 1:!');
           isTilting = true;
           break;
         case 1:
           panX = app.renderer.plugins.interaction.mouse.global.x;
           panY = app.renderer.plugins.interaction.mouse.global.y;
-          console.log('case 2:!');
           isPanning = true;
           return false;
         case 0:
@@ -236,8 +234,8 @@
     }
     );
 
-    var endx = 0;
-    var endy = 0;
+    let endx = 0;
+    let endy = 0;
     function step(timestamp) {
       if (depthMapImage && depthMapImage.texture && app.renderer.view.style) {
 
@@ -248,11 +246,11 @@
         endy = app.renderer.plugins.interaction.mouse.global.y;
 
         if (isTilting) {
-          var radius = Math.min(app.renderer.width, app.renderer.height);
+          let radius = Math.min(app.renderer.width, app.renderer.height);
           window.displacementFilter.uniforms.offset[0] -= ((endx - tiltX) / radius * 2);
           window.displacementFilter.uniforms.offset[1] += ((endy - tiltY) / radius * 2);
 
-          var xy = Math.sqrt(window.displacementFilter.uniforms.offset[0] * window.displacementFilter.uniforms.offset[0] + window.displacementFilter.uniforms.offset[1] * window.displacementFilter.uniforms.offset[1]);
+          let xy = Math.sqrt(window.displacementFilter.uniforms.offset[0] * window.displacementFilter.uniforms.offset[0] + window.displacementFilter.uniforms.offset[1] * window.displacementFilter.uniforms.offset[1]);
           if (xy / 0.5 > 1) {
             window.displacementFilter.uniforms.offset[0] /= xy / 0.5;
             window.displacementFilter.uniforms.offset[1] /= xy / 0.5;
@@ -317,7 +315,7 @@
 
 
         // scale = zoom * fit
-        var scale = window.displacementFilter.uniforms.zoom *
+        let scale = window.displacementFilter.uniforms.zoom *
           Math.min(w / window.displacementFilter.uniforms.textureSize[0], h / window.displacementFilter.uniforms.textureSize[1]);
 
         let mouseX = (app.renderer.plugins.interaction.mouse.global.x - w / 2 + window.displacementFilter.uniforms.textureSize[0] / 2 * scale);
@@ -496,8 +494,8 @@
       }
       strokeInverseCtx.stroke();
       let strokeInverseData = strokeInverseCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      var sidd = strokeInverseData.data;
-      for (var i = 3; i < sidd.length; i += 4) {
+      let sidd = strokeInverseData.data;
+      for (let i = 3; i < sidd.length; i += 4) {
         sidd[i] = sidd[i] < 255 ? 0 : 255; // a, make it shape
       }
       strokeInverseCtx.putImageData(strokeInverseData, 0, 0);
@@ -507,8 +505,8 @@
       let strokeCtx = strokeCanvas.getContext('2d');
       strokeCtx.drawImage(dmCanvas, 0, 0);
       let strokeData = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      var sdd = strokeData.data;
-      for (var i = 3; i < sdd.length; i += 4) {
+      let sdd = strokeData.data;
+      for (let i = 3; i < sdd.length; i += 4) {
         sdd[i] = sidd[i] < 255 ? 255 : 0; // invert of strokeInverse
       }
       strokeCtx.putImageData(strokeData, 0, 0);
@@ -518,8 +516,8 @@
       // So that after apply the blur filter, the edge of image will not become transparent
       let expandedStrokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
       let expandedStrokeCtx = expandedStrokeCanvas.getContext('2d');
-      for (var i = blurRadius + 5; i > 0; i--) { // From outter to inner
-        for (var j = -i; j < i; j++) {
+      for (let i = blurRadius + 5; i > 0; i--) { // From outter to inner
+        for (let j = -i; j < i; j++) {
           // Draw the point on each of the edges (square)
           expandedStrokeCtx.drawImage(strokeCanvas, -i, j);
           expandedStrokeCtx.drawImage(strokeCanvas, j, i);
@@ -542,8 +540,8 @@
 
 
       let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      var dmdd = dmData.data;
-      for (var i = 0; i < dmdd.length; i += 4) {
+      let dmdd = dmData.data;
+      for (let i = 0; i < dmdd.length; i += 4) {
         dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // copy from the blur canvas
       }
       dmCtx.putImageData(dmData, 0, 0);
@@ -594,8 +592,8 @@
 
     function getCurrentMaskSelected() {
       let newMasks = { length: 0 };
-      for (var i = 0; i < 255; i++) {
-        var checkbox = document.getElementById('mask-' + i);
+      for (let i = 0; i < 255; i++) {
+        let checkbox = document.getElementById('mask-' + i);
         if (!checkbox || checkbox.checked) {
           newMasks[i] = 1;
           newMasks.length = newMasks.length + 1;
@@ -796,11 +794,11 @@
 
       let set1 = new Map();
       let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-      var dmdd = dmImageData.data;
+      let dmdd = dmImageData.data;
       let bmdd = bmImageData.data;
 
 
-      for (var j = 0; j < dmdd.length; j += 4) {
+      for (let j = 0; j < dmdd.length; j += 4) {
         let maskId = dmdd[j + 1];
         set1.set(maskId, maskId);
         // bmdd[j + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
@@ -817,22 +815,21 @@
       let maskList = document.getElementById('mask-list');
       maskList.replaceChildren();
       for (const [maskId, value] of set1.entries()) {
-        var li = document.createElement('li');
+        let li = document.createElement('li');
 
 
         // Create thumbnail
         // Draw the canvas
         let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-        var tmdd = tmImageData.data;
+        let tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
         tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-        for (var j = 3; j < dmdd.length; j += 4) {
+        for (let j = 3; j < dmdd.length; j += 4) {
           tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
         }
         tmCtx.putImageData(tmImageData, 0, 0);
         tmCtx.globalCompositeOperation = 'source-in';
         tmCtx.drawImage(bmCanvas, 0, 0);
-        var tmdd = tmImageData.data;
         let liCanvas = document.createElement("CANVAS");
         liCanvas.width = 100;
         liCanvas.height = 100;
@@ -858,16 +855,16 @@
 
 
     document.getElementById('mask-select-all').onclick = function () {
-      var checkboxes = document.getElementsByName('mask-checkbox');
-      for (var checkbox of checkboxes) {
+      let checkboxes = document.getElementsByName('mask-checkbox');
+      for (let checkbox of checkboxes) {
         checkbox.checked = this.checked;
       }
     }
 
     // UI event for download button
-    var downloadButton = document.getElementById('file-download-button');
+    let downloadButton = document.getElementById('file-download-button');
     downloadButton.addEventListener('click', function (e) {
-      var link = document.createElement('a');
+      let link = document.createElement('a');
       link.download = 'download.png';
       link.href = dmCanvas.toDataURL('image/png');
       link.click();
@@ -903,7 +900,7 @@
   }
 
 
-  var frag =
+  let frag =
     `precision mediump float;
 uniform vec2 offset;
 uniform vec2 pan;
