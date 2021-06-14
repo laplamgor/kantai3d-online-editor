@@ -356,19 +356,6 @@
 
     resize();
 
-    function changeDisplayMode(mode) {
-      switch (mode) {
-        case "basicTextureMode":
-          window.displacementFilter.uniforms.displayMode = 0;
-          break;
-        case "normalMapMode":
-          window.displacementFilter.uniforms.displayMode = 1;
-          break;
-        case "mixedMode":
-          window.displacementFilter.uniforms.displayMode = 2;
-      }
-    }
-
     function startDrawing() {
       if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
         strokes.push({ path: [], mask: 65535, brushId: 0 });
@@ -846,45 +833,50 @@
         input.checked = true;
         input.addEventListener('change', updateMaskIndicator);
 
-        li.appendChild(input);
-        li.appendChild(liCanvas);
+        
+        let label = document.createElement("label");
+        label.appendChild(input);
+        label.appendChild(liCanvas);
+        li.appendChild(label);
         maskList.appendChild(li);
       }
     }
 
 
-
+    let isMaskIndicatorOn = true;
     function updateMaskIndicator() {
-      let mask = getCurrentMaskSelected();
-
-      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-      let dmdd = dmImageData.data;
-
-      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
-      let tmCtx = tempCanvas.getContext('2d');
-      let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-      let tmdd = tmImageData.data;
-
-      tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-      for (let j = 0; j < dmdd.length; j += 4) {
-        // Red
-        tmdd[j] = 255;
-        tmdd[j + 1] = 0;
-        tmdd[j + 2] = 0;
-
-        // half transparent on the masked area. invisible on the editable area
-        tmdd[j + 3] = mask[dmdd[j + 1]] == 1 ? 0 : 128;
-      }
-      tmCtx.putImageData(tmImageData, 0, 0);
-
 
       // Redraw the basemap
       bmCtx = bmCanvas.getContext('2d');
       bmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
       bmCtx.drawImage(bmImage, 0, 0);
-      bmCtx.drawImage(tempCanvas, 0, 0);
-      bmTexture.update();
+      if (isMaskIndicatorOn) {
 
+        let mask = getCurrentMaskSelected();
+
+        let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmdd = dmImageData.data;
+
+        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+        let tmCtx = tempCanvas.getContext('2d');
+        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmdd = tmImageData.data;
+
+        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+        for (let j = 0; j < dmdd.length; j += 4) {
+          // Red
+          tmdd[j] = 255;
+          tmdd[j + 1] = 0;
+          tmdd[j + 2] = 0;
+
+          // half transparent on the masked area. invisible on the editable area
+          tmdd[j + 3] = mask[dmdd[j + 1]] == 1 ? 0 : 128;
+        }
+        tmCtx.putImageData(tmImageData, 0, 0);
+        bmCtx.drawImage(tempCanvas, 0, 0);
+      }
+
+      bmTexture.update();
       redraw();
     }
 
@@ -936,11 +928,17 @@
 
 
     function onKeyDown(key) {
-      // W Key is 87
-      // Up arrow is 38
-      if (key.keyCode === 87 || key.keyCode === 38) {
-        updateMaskIndicator();
 
+      if (key.key === '\\') {
+        // Toggle the mask indicator, just like in Photoshop
+        isMaskIndicatorOn = !isMaskIndicatorOn;
+        updateMaskIndicator();
+      } else if (key.key === '1') {
+        window.displacementFilter.uniforms.displayMode = 0;
+      } else if (key.key === '2') {
+        window.displacementFilter.uniforms.displayMode = 1;
+      } else if (key.key === '3') {
+        window.displacementFilter.uniforms.displayMode = 2;
       }
     }
     document.addEventListener('keydown', onKeyDown);
