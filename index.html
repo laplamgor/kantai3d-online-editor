@@ -163,7 +163,7 @@
       <!-- Mask page -->
       <li>
         Masks
-        <div>
+        <div class="uk-margin-xlarge-bottom">
           <ul class="uk-list uk-list-collapse uk-list-divider" id="mask-list">
             <li>
               <input class="uk-checkbox" type="checkbox" checked>
@@ -172,9 +172,24 @@
           </ul>
         </div>
 
-        <div>
-          <input class="uk-checkbox" type="checkbox" id="mask-select-all">
-          <label>Select All</label>
+        <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
+          height: 50px; 
+          width: 320px;
+          position: fixed;
+          z-index: 1;
+          bottom: 0;
+          left: 0;
+          overflow-x: hidden;
+          overflow-y: overlay;
+        ">
+                <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="Select All"><i class="material-icons icon-align">library_add_check</i>Button</button>
+                <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-none" uk-tooltip="Select None"><i class="material-icons icon-align">layers_clear</i>Button</button>
+                <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="File"><i class="material-icons icon-align">done_all</i>Button</button>
+                <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="File"><i class="material-icons icon-align">add_circle_outline</i>Button</button>
+                <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="File"><i class="material-icons icon-align">remove_circle</i>Button</button>
+
+          <!-- <input class="uk-checkbox" type="checkbox" id="mask-select-all">
+          <label>Select All</label> -->
         </div>
 
       </li>

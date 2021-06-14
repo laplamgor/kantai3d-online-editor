@@ -363,21 +363,27 @@
       }
       strokes[strokes.length - 1].brushId = brushId;
 
-      switch (brushId) {
-        default:
-        case 0:
-          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
-          strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
-          strokes[strokes.length - 1].value = parseInt(document.getElementById('pen-value-slider').value) * penFlip;
-          break;
-        case 1:
-          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('roller-inner-radius-slider').value);
-          strokes[strokes.length - 1].value = parseInt(document.getElementById('roller-value-slider').value);
-          break;
-        case 2:
-          strokes[strokes.length - 1].r1 = parseInt(document.getElementById('smooth-inner-radius-slider').value);
-          strokes[strokes.length - 1].value = parseInt(document.getElementById('smooth-value-slider').value);
-          break; f
+      if (isMaskEditing) {
+        strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+        strokes[strokes.length - 1].value = maskEditingId;
+        strokes[strokes.length - 1].isMaskEditing = true;
+      } else {
+        switch (brushId) {
+          default:
+          case 0:
+            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+            strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
+            strokes[strokes.length - 1].value = parseInt(document.getElementById('pen-value-slider').value) * penFlip;
+            break;
+          case 1:
+            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('roller-inner-radius-slider').value);
+            strokes[strokes.length - 1].value = parseInt(document.getElementById('roller-value-slider').value);
+            break;
+          case 2:
+            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('smooth-inner-radius-slider').value);
+            strokes[strokes.length - 1].value = parseInt(document.getElementById('smooth-value-slider').value);
+            break; f
+        }
       }
 
 
@@ -388,6 +394,7 @@
     function endDrawing() {
       isDrawing = false;
       updateCache();
+      refreshMaskListPanel();
     }
 
     let strokes = [];
@@ -439,25 +446,34 @@
       }
 
       // Draw all steps
+      let maskUpdated = false;
       for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
-        updateMaskCanvas(strokes[i].mask);
+        if (strokes[i].isMaskEditing) {
+          drawMaskLine(strokes[i].path, strokes[i].r1, strokes[i].value);
+          maskUpdated = true;
+        } else {
+          updateMaskCanvas(strokes[i].mask);
 
-        switch (strokes[i].brushId) {
-          default:
-          case 0:
-            drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, strokes[i].value, false);
-            break;
-          case 1:
-            drawSmoothLine(strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
-            break;
-          case 2:
-            updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
-            break; f
+          switch (strokes[i].brushId) {
+            default:
+            case 0:
+              drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, strokes[i].value, false);
+              break;
+            case 1:
+              drawSmoothLine(strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
+              break;
+            case 2:
+              updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
+              break; f
+          }
+          drawMaskedArea(strokes[i].mask);
         }
-
-        drawMaskedArea(strokes[i].mask);
       }
 
+      if (maskUpdated) {
+        updateMaskIndicator();
+      }
+      
       dmTexture.update();
     }
 
@@ -789,13 +805,7 @@
       for (let j = 0; j < dmdd.length; j += 4) {
         let maskId = dmdd[j + 1];
         set1.set(maskId, maskId);
-        // bmdd[j + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
-        // bmdd[j + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
-        // bmdd[j + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
-        // bmdd[j + 3] = 255; // a, if it match any given mask, opacity set to 1
       }
-
-
 
       let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       const tmCtx = tempCanvas.getContext('2d');
@@ -805,9 +815,8 @@
       for (const [maskId, value] of set1.entries()) {
         let li = document.createElement('li');
 
-
         // Create thumbnail
-        // Draw the canvas
+        // Draw the temp canvas
         let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
         let tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
@@ -817,7 +826,7 @@
         }
         tmCtx.putImageData(tmImageData, 0, 0);
         tmCtx.globalCompositeOperation = 'source-in';
-        tmCtx.drawImage(bmCanvas, 0, 0);
+        tmCtx.drawImage(bmImage, 0, 0);
         let liCanvas = document.createElement("CANVAS");
         liCanvas.width = 100;
         liCanvas.height = 100;
@@ -843,6 +852,11 @@
     }
 
 
+    let isMaskEditing = true;
+    let maskEditingId = 0;
+    
+
+
     let isMaskIndicatorOn = true;
     function updateMaskIndicator() {
 
@@ -850,7 +864,26 @@
       bmCtx = bmCanvas.getContext('2d');
       bmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
       bmCtx.drawImage(bmImage, 0, 0);
-      if (isMaskIndicatorOn) {
+      if (isMaskEditing) {
+        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+        let tmCtx = tempCanvas.getContext('2d');
+        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmdd = tmImageData.data;
+        
+
+        let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmdd = dmImageData.data;
+
+        for (var i = 0; i < dmdd.length; i+=4) {
+          let maskId = dmdd[i + 1];
+          tmdd[i + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
+          tmdd[i + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
+          tmdd[i + 2] = 255 - ((maskId & 0b00100000) << 2) - ((maskId & 0b00000100) << 4) - 0b00100000; // b
+          tmdd[i + 3] = maskId == maskEditingId ? 0 : 192; // a
+        }
+        tmCtx.putImageData(tmImageData, 0, 0);
+        bmCtx.drawImage(tempCanvas, 0, 0);
+      } else if (isMaskIndicatorOn) {
 
         let mask = getCurrentMaskSelected();
 
@@ -877,13 +910,59 @@
       }
 
       bmTexture.update();
-      redraw();
+    }
+
+
+    
+    function drawMaskLine(path, radius , value) {
+      let depth;
+      
+      dmCtx.globalAlpha = 1;
+      depth = value;
+      dmCtx.globalCompositeOperation = 'source-over';
+     
+      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+      let tmCtx = tempCanvas.getContext('2d');
+
+      // Draw stroke on a temp canvas
+      tmCtx.beginPath();
+      tmCtx.lineWidth = radius * 2. - 1.;
+      tmCtx.lineCap = "round";
+      tmCtx.lineJoin = "round";
+      tmCtx.strokeStyle = "rgba(" + 0 + "," + value + "," + 0 + "," + 255 + ")";
+      tmCtx.moveTo(path[0].x, path[0].y);
+      for (let index = 0; index < path.length; ++index) {
+        let point = path[index];
+        tmCtx.lineTo(point.x, point.y);
+      }
+      tmCtx.stroke();
+
+      
+      // Copy the solid pixel onto the dmCanvas
+      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
+      let dmdd = dmData.data;
+      let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      let tmdd = tmImageData.data;
+      for (let j = 1; j < dmdd.length; j += 4) {
+        if (tmdd[j + 2] > 0) { // a
+          dmdd[j] = value;
+        }
+      }
+      dmCtx.putImageData(dmData, 0, 0);
     }
 
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
-        checkbox.checked = this.checked;
+        checkbox.checked = true;
+      }
+      updateMaskIndicator();
+    }
+    
+    document.getElementById('mask-select-none').onclick = function () {
+      let checkboxes = document.getElementsByName('mask-checkbox');
+      for (let checkbox of checkboxes) {
+        checkbox.checked = false;
       }
       updateMaskIndicator();
     }
