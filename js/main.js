@@ -824,8 +824,16 @@
       maskList.replaceChildren();
       for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
         let li = document.createElement('li');
-        li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g  + "," + maskColor[maskId].b  + "," + 0.5 + ")";;
+        li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g + "," + maskColor[maskId].b + "," + 0.5 + ")";;
 
+        // Create checkbox
+        let input = document.createElement("input");
+        input.type = 'checkbox';
+        input.classList.add("uk-checkbox");
+        input.id = 'mask-' + maskId;
+        input.name = 'mask-checkbox';
+        input.checked = true;
+        input.addEventListener('change', updateMaskIndicator);
 
         // Create thumbnail
         // Draw the temp canvas
@@ -845,26 +853,45 @@
         let ctx = liCanvas.getContext('2d');
         ctx.drawImage(tempCanvas, 0, 0, 100, 100);
 
-        // Create checkbox
-        let input = document.createElement("input");
-        input.type = 'checkbox';
-        input.classList.add("uk-checkbox");
-        input.id = 'mask-' + maskId;
-        input.name = 'mask-checkbox';
-        input.checked = true;
-        input.addEventListener('change', updateMaskIndicator);
 
+        // Create edit button
+        let a = document.createElement("a");
+        a.innerHTML = '<i class="material-icons icon-align">edit</i>';
+        a.classList.add("uk-link-heading");
+        a.classList.add("uk-padding-small");
+        a.name = "mask-edit-icon";
+        a.href = "#";
+        a.setAttribute('uk-tooltip', "Edit");
+        a.setAttribute('mask-id', maskId);
+        a.addEventListener('click', function (e) {
+          let editButtons = document.getElementsByName('mask-edit-icon');
+          for (let button of editButtons) {
+            button.innerHTML = '<i class="material-icons icon-align">edit</i>';
+            button.setAttribute('uk-tooltip', "Edit");
+          }
+          if (this.getAttribute('mask-id') != maskEditingId || !isMaskEditing) {
+            this.innerHTML = '<i class="material-icons icon-align">done_outline</i>';
+            this.setAttribute('uk-tooltip', "Done");
+            maskEditingId = maskId;
+            isMaskEditing = true;
+          } else if (isMaskEditing) {
+            isMaskEditing = false;
+          }
+          updateMaskIndicator();
+        });
 
         let label = document.createElement("label");
+
+        li.appendChild(label);
+        label.appendChild(a);
         label.appendChild(input);
         label.appendChild(liCanvas);
-        li.appendChild(label);
         maskList.appendChild(li);
       }
     }
 
 
-    let isMaskEditing = true;
+    let isMaskEditing = false;
     let maskEditingId = 0;
 
 
