@@ -184,6 +184,16 @@
     );
 
     $('#canvas').bind('mouseup', function (event) {
+      if (event.which == 3 & event.originalEvent.detail == 2) {
+        // Double right click to reset the tilt angle
+        tiltX = 0;
+        tiltY = 0;
+        isTilting = false;
+        window.displacementFilter.uniforms.offset[0] = 0;
+        window.displacementFilter.uniforms.offset[1] = 0;
+        return;
+      }
+
       switch (event.button) {
         case 2:
           isTilting = false;
