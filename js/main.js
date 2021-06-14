@@ -17,18 +17,19 @@
     let bmImageData;
     let bmPath = './f2152.png';
     let bmCanvas;
+    let bmCtx;
     let bmImage = new Image();
     let bmTexture = PIXI.Texture.EMPTY;
     bmImage.onload = function () {
       bmCanvas = document.createElement("CANVAS");;
       bmCanvas.width = bmImage.width;
       bmCanvas.height = bmImage.height;
-      const ctx = bmCanvas.getContext('2d');
-      ctx.drawImage(bmImage, 0, 0);
+      bmCtx = bmCanvas.getContext('2d');
+      bmCtx.drawImage(bmImage, 0, 0);
 
-      bmImageData = ctx.getImageData(0, 0, bmCanvas.width, bmCanvas.height);
+      bmImageData = bmCtx.getImageData(0, 0, bmCanvas.width, bmCanvas.height);
 
-      bmTexture = PIXI.Texture.fromBuffer(bmImageData.data, bmImage.width, bmImage.height);
+      bmTexture = PIXI.Texture.from(bmCanvas);
       depthMapImage.texture = bmTexture;
       depthMapImage2.texture = bmTexture;
       needUpdateReverseMapBuffer = true;
@@ -833,7 +834,7 @@
         let liCanvas = document.createElement("CANVAS");
         liCanvas.width = 100;
         liCanvas.height = 100;
-        const ctx = liCanvas.getContext('2d');
+        let ctx = liCanvas.getContext('2d');
         ctx.drawImage(tempCanvas, 0, 0, 100, 100);
 
         // Create checkbox
@@ -843,22 +844,56 @@
         input.id = 'mask-' + maskId;
         input.name = 'mask-checkbox';
         input.checked = true;
+        input.addEventListener('change', updateMaskIndicator);
 
         li.appendChild(input);
         li.appendChild(liCanvas);
         maskList.appendChild(li);
       }
-
-      bmTexture.update();
-      redraw();
     }
 
+
+
+    function updateMaskIndicator() {
+      let mask = getCurrentMaskSelected();
+
+      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      let dmdd = dmImageData.data;
+
+      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+      let tmCtx = tempCanvas.getContext('2d');
+      let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      let tmdd = tmImageData.data;
+
+      tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+      for (let j = 0; j < dmdd.length; j += 4) {
+        // Red
+        tmdd[j] = 255;
+        tmdd[j + 1] = 0;
+        tmdd[j + 2] = 0;
+
+        // half transparent on the masked area. invisible on the editable area
+        tmdd[j + 3] = mask[dmdd[j + 1]] == 1 ? 0 : 128;
+      }
+      tmCtx.putImageData(tmImageData, 0, 0);
+
+
+      // Redraw the basemap
+      bmCtx = bmCanvas.getContext('2d');
+      bmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+      bmCtx.drawImage(bmImage, 0, 0);
+      bmCtx.drawImage(tempCanvas, 0, 0);
+      bmTexture.update();
+
+      redraw();
+    }
 
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
         checkbox.checked = this.checked;
       }
+      updateMaskIndicator();
     }
 
     // UI event for download button
@@ -897,6 +932,19 @@
       document.getElementById('undo-button').disabled = false;
       document.getElementById('redo-button').disabled = redoList.length == 0;
     });
+
+
+
+    function onKeyDown(key) {
+      // W Key is 87
+      // Up arrow is 38
+      if (key.keyCode === 87 || key.keyCode === 38) {
+        updateMaskIndicator();
+
+      }
+    }
+    document.addEventListener('keydown', onKeyDown);
+
   }
 
 
