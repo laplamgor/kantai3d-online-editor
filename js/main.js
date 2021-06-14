@@ -473,7 +473,7 @@
       if (maskUpdated) {
         updateMaskIndicator();
       }
-      
+
       dmTexture.update();
     }
 
@@ -812,7 +812,7 @@
 
       let maskList = document.getElementById('mask-list');
       maskList.replaceChildren();
-      for (const [maskId, value] of set1.entries()) {
+      for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
         let li = document.createElement('li');
 
         // Create thumbnail
@@ -842,7 +842,7 @@
         input.checked = true;
         input.addEventListener('change', updateMaskIndicator);
 
-        
+
         let label = document.createElement("label");
         label.appendChild(input);
         label.appendChild(liCanvas);
@@ -854,7 +854,7 @@
 
     let isMaskEditing = true;
     let maskEditingId = 0;
-    
+
 
 
     let isMaskIndicatorOn = true;
@@ -869,12 +869,12 @@
         let tmCtx = tempCanvas.getContext('2d');
         let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
         let tmdd = tmImageData.data;
-        
+
 
         let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
         let dmdd = dmImageData.data;
 
-        for (var i = 0; i < dmdd.length; i+=4) {
+        for (var i = 0; i < dmdd.length; i += 4) {
           let maskId = dmdd[i + 1];
           tmdd[i + 0] = 255 - ((maskId & 0b01000000) << 1) - ((maskId & 0b00001000) << 3) - ((maskId & 0b00000001) << 5); // r
           tmdd[i + 1] = 255 - ((maskId & 0b10000000) << 0) - ((maskId & 0b00010000) << 2) - ((maskId & 0b00000010) << 4); // g
@@ -913,14 +913,14 @@
     }
 
 
-    
-    function drawMaskLine(path, radius , value) {
+
+    function drawMaskLine(path, radius, value) {
       let depth;
-      
+
       dmCtx.globalAlpha = 1;
       depth = value;
       dmCtx.globalCompositeOperation = 'source-over';
-     
+
       let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       let tmCtx = tempCanvas.getContext('2d');
 
@@ -937,7 +937,7 @@
       }
       tmCtx.stroke();
 
-      
+
       // Copy the solid pixel onto the dmCanvas
       let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
       let dmdd = dmData.data;
@@ -958,7 +958,7 @@
       }
       updateMaskIndicator();
     }
-    
+
     document.getElementById('mask-select-none').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
