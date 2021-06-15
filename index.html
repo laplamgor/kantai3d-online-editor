@@ -41,11 +41,16 @@
       }
     </style>
     <ul class="uk-child-width-expand uk-tab uk-margin-remove uk-background-muted" uk-switcher uk-sticky="offset: 0">
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="File"><i class="material-icons icon-align">photo_library</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Paint"><i class="material-icons icon-align">edit</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Masks"><i class="material-icons icon-align">layers</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="History"><i class="material-icons icon-align">history</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="About"><i class="material-icons icon-align">info</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="File"><i
+            class="material-icons icon-align">photo_library</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Paint"><i
+            class="material-icons icon-align">edit</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Masks"><i
+            class="material-icons icon-align">layers</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="History"><i
+            class="material-icons icon-align">history</i></a></li>
+      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="About"><i
+            class="material-icons icon-align">info</i></a></li>
     </ul>
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
@@ -161,10 +166,11 @@
       </li>
 
       <!-- Mask page -->
-      <li>
-        Masks
+      <li uk-filter="animation: fade; target: .js-filter">
         <div class="uk-margin-xlarge-bottom">
-          <ul class="uk-list uk-list-collapse uk-list-divider" id="mask-list">
+
+
+          <ul class="js-filter uk-list uk-list-collapse uk-list-divider" id="mask-list">
             <li>
               <input class="uk-checkbox" type="checkbox" checked>
               <canvas width="100" height="100">
@@ -182,10 +188,19 @@
           overflow-x: hidden;
           overflow-y: overlay;
         ">
-          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="Select All"><i class="material-icons icon-align">library_add_check</i></button>
-          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-none" uk-tooltip="Select None"><i class="material-icons icon-align">layers_clear</i></button>
-          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="File"><i class="material-icons icon-align">done_all</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-all" uk-tooltip="Select All"><i
+              class="material-icons icon-align">check_box</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-none"
+            uk-tooltip="Select None"><i class="material-icons icon-align">check_box_outline_blank</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="mask-select-filter"
+            uk-tooltip="Hide Empty Layers" uk-filter-control=".mask-non-empty"><i
+              class="material-icons icon-align">filter_alt</i></button>
+          <button class="uk-button uk-button-primary uk-padding-remove" id="mask-select-unfilter"
+            uk-tooltip="Show All Layers" uk-filter-control hidden><i
+              class="material-icons icon-align">filter_alt</i></button>
+
         </div>
+
 
       </li>
 

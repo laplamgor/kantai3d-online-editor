@@ -810,30 +810,14 @@
       maskColor[i] = color;
     }
 
-
-    function refreshMaskListPanel() {
-      if (!bmImage.width || !dmCtx || !bmImageData) {
-        return;
-      }
-
-      let set1 = new Map();
-      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-      let dmdd = dmImageData.data;
-      let bmdd = bmImageData.data;
-
-
-      for (let j = 0; j < dmdd.length; j += 4) {
-        let maskId = dmdd[j + 1];
-        set1.set(maskId, maskId);
-      }
-
-      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
-      const tmCtx = tempCanvas.getContext('2d');
-
+    function initMaskListPanel() {
       let maskList = document.getElementById('mask-list');
       maskList.replaceChildren();
-      for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
+
+
+      for (let maskId = 0; maskId < 256; maskId++) {
         let li = document.createElement('li');
+        li.id = 'mask-item-' + maskId;
         li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g + "," + maskColor[maskId].b + "," + 0.5 + ")";;
 
         // Create checkbox
@@ -846,22 +830,10 @@
         input.addEventListener('change', updateMaskIndicator);
 
         // Create thumbnail
-        // Draw the temp canvas
-        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-        let tmdd = tmImageData.data;
-        tmCtx.globalCompositeOperation = 'source-over';
-        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-        for (let j = 3; j < dmdd.length; j += 4) {
-          tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
-        }
-        tmCtx.putImageData(tmImageData, 0, 0);
-        tmCtx.globalCompositeOperation = 'source-in';
-        tmCtx.drawImage(bmImage, 0, 0);
         let liCanvas = document.createElement("CANVAS");
         liCanvas.width = 100;
         liCanvas.height = 100;
-        let ctx = liCanvas.getContext('2d');
-        ctx.drawImage(tempCanvas, 0, 0, 100, 100);
+        liCanvas.id = 'mask-thumbnail-canvas-' + maskId;
 
 
         // Create edit button
@@ -899,12 +871,57 @@
         maskList.appendChild(li);
       }
     }
+    initMaskListPanel();
 
+    function refreshMaskListPanel() {
+      if (!bmImage.width || !dmCtx || !bmImageData) {
+        return;
+      }
+
+      let set1 = new Map();
+      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      let dmdd = dmImageData.data;
+      let bmdd = bmImageData.data;
+
+      for (let j = 0; j < dmdd.length; j += 4) {
+        let maskId = dmdd[j + 1];
+        set1.set(maskId, maskId);
+      }
+
+      for (let maskId = 0; maskId < 256; maskId++) {
+        let li = document.getElementById('mask-item-' + maskId);
+        li.classList.remove('mask-non-empty');
+      }
+
+
+      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+      const tmCtx = tempCanvas.getContext('2d');
+      for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
+
+        
+        let li = document.getElementById('mask-item-' + maskId);
+        li.classList.add('mask-non-empty');
+
+        // Update thumbnail
+        // Draw the temp canvas
+        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmdd = tmImageData.data;
+        tmCtx.globalCompositeOperation = 'source-over';
+        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+        for (let j = 3; j < dmdd.length; j += 4) {
+          tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
+        }
+        tmCtx.putImageData(tmImageData, 0, 0);
+        tmCtx.globalCompositeOperation = 'source-in';
+        tmCtx.drawImage(bmImage, 0, 0);
+        let liCanvas = document.getElementById('mask-thumbnail-canvas-' + maskId);
+        let ctx = liCanvas.getContext('2d');
+        ctx.drawImage(tempCanvas, 0, 0, 100, 100);
+      }
+    }
 
     let isMaskEditing = false;
     let maskEditingId = 0;
-
-
 
     let isMaskIndicatorOn = true;
     function updateMaskIndicator() {
@@ -1013,6 +1030,16 @@
         checkbox.checked = false;
       }
       updateMaskIndicator();
+    }
+
+    document.getElementById('mask-select-filter').onclick = function () {
+      document.getElementById('mask-select-unfilter').hidden = false;
+      this.hidden = true;
+    }
+    
+    document.getElementById('mask-select-unfilter').onclick = function () {
+      document.getElementById('mask-select-filter').hidden = false;
+      this.hidden = true;
     }
 
     // UI event for download button
