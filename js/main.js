@@ -404,7 +404,9 @@
     function endDrawing() {
       isDrawing = false;
       updateCache();
-      refreshMaskListPanel();
+      if (isMaskEditing) {
+        refreshMaskListPanel();
+      }
     }
 
     let strokes = [];
@@ -904,7 +906,7 @@
 
         // Update thumbnail
         // Draw the temp canvas
-        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
         let tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
         tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
@@ -1036,7 +1038,7 @@
       document.getElementById('mask-select-unfilter').hidden = false;
       this.hidden = true;
     }
-    
+
     document.getElementById('mask-select-unfilter').onclick = function () {
       document.getElementById('mask-select-filter').hidden = false;
       this.hidden = true;
@@ -1245,11 +1247,11 @@ const float dmax = 1.0;
 // 10 * 1.1
 #define MAXZOOM 11.0
 
-#define MAXSTEPS 600.0
+#define MAXSTEPS 1000.0
 
 
 float fit = min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]);
-float steps = max(MAXSTEPS *length(offset *zoom *fit), 30.0);
+float steps = min(1000.0, max(MAXSTEPS *length(offset  / fit), 30.0));
 
 void main(void)
 {
