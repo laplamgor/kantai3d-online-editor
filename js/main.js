@@ -13,26 +13,47 @@
     let curOnTexX = 0;
     let curOnTexY = 0;
 
-    // Load base map as buffer
     let bmImageData;
     let bmPath = './f2152.png';
-    let bmCanvas;
+    let bmCanvas = document.createElement("CANVAS");
     let bmCtx;
     let bmImage = new Image();
     let bmTexture = PIXI.Texture.EMPTY;
+    let baseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+
+    let reverseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+
+
+    let container = new PIXI.Container();
+    let cursorCanvas = document.createElement("CANVAS");
+    let cursorCtx ;
+    let cursorTexture = PIXI.Texture.EMPTY;
+    let cursorSprite = new PIXI.Sprite.from(PIXI.Texture.WHITE);
+
+    // Load base map as buffer
     bmImage.onload = function () {
-      bmCanvas = document.createElement("CANVAS");;
       bmCanvas.width = bmImage.width;
       bmCanvas.height = bmImage.height;
       bmCtx = bmCanvas.getContext('2d');
       bmCtx.drawImage(bmImage, 0, 0);
-
       bmImageData = bmCtx.getImageData(0, 0, bmCanvas.width, bmCanvas.height);
 
       bmTexture = PIXI.Texture.from(bmCanvas);
-      depthMapImage.texture = bmTexture;
-      depthMapImage2.texture = bmTexture;
+      baseMapSprite.texture = bmTexture;
+      reverseMapSprite.texture = bmTexture;
       needUpdateReverseMapBuffer = true;
+
+
+      
+      cursorCanvas.width = bmImage.width;
+      cursorCanvas.height = bmImage.height;
+      cursorCtx = cursorCanvas.getContext('2d');
+      cursorTexture = PIXI.Texture.from(cursorCanvas);
+      cursorSprite.texture = cursorTexture;
+
+
+
+
 
       window.displacementFilter.uniforms.textureWidth = bmImage.width;
       window.displacementFilter.uniforms.textureHeight = bmImage.height;
@@ -118,8 +139,6 @@
       filterManager.applyFilter(this, input, output);
     }
 
-    let depthMapImage = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
-    let depthMapImage2 = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
@@ -133,20 +152,19 @@
     window.displacementFilter.uniforms.displayMode = 2;
 
 
-    let container = new PIXI.Container();
-    let cursorSpirte = new PIXI.Sprite(PIXI.Texture.WHITE);
-    cursorSpirte.anchor.set(0.5);
+    
+
     container.filters = [window.displacementFilter];
-    container.addChild(depthMapImage);
+    container.addChild(baseMapSprite);
+    container.addChild(cursorSprite);
 
 
 
     window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
 
     let containerReverseMap = new PIXI.Container();
-    container.addChild(cursorSpirte);
     containerReverseMap.filters = [window.offsetFilter];
-    containerReverseMap.addChild(depthMapImage2);
+    containerReverseMap.addChild(reverseMapSprite);
 
 
 
@@ -248,7 +266,7 @@
     let endx = 0;
     let endy = 0;
     function step(timestamp) {
-      if (depthMapImage && depthMapImage.texture && app.renderer.view.style) {
+      if (baseMapSprite && baseMapSprite.texture && app.renderer.view.style) {
 
         if ((isPanning || isTilting || isDrawing) && (endx != app.renderer.plugins.interaction.mouse.global.x || endy != app.renderer.plugins.interaction.mouse.global.y)) {
           needUpdateReverseMapBuffer = true;
@@ -322,9 +340,6 @@
         }
 
 
-
-
-
         // scale = zoom * fit
         let scale = window.displacementFilter.uniforms.zoom *
           Math.min(w / window.displacementFilter.uniforms.textureSize[0], h / window.displacementFilter.uniforms.textureSize[1]);
@@ -339,8 +354,13 @@
         mouseY = mouseY / scale;
         curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[1];
 
-        cursorSpirte.x = curOnTexX / window.displacementFilter.uniforms.textureSize[0] * w;
-        cursorSpirte.y = curOnTexY / window.displacementFilter.uniforms.textureSize[1] * h;
+        // Update cursor image
+        cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
+        // cursorCtx.drawImage(dmCanvas, mouseX, mouseY);
+        cursorCtx.beginPath();
+        cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), 10, 0, 2 * Math.PI);
+        cursorCtx.stroke();
+        cursorTexture.update();
       }
 
       window.requestAnimationFrame(step);
@@ -357,11 +377,14 @@
       const parent = app.view.parentNode;
       app.renderer.resize(parent.clientWidth, parent.clientHeight);
 
-      depthMapImage.width = app.renderer.screen.width;
-      depthMapImage.height = app.renderer.screen.height;
+      baseMapSprite.width = app.renderer.screen.width;
+      baseMapSprite.height = app.renderer.screen.height;
 
-      depthMapImage2.width = app.renderer.screen.width;
-      depthMapImage2.height = app.renderer.screen.height;
+      reverseMapSprite.width = app.renderer.screen.width;
+      reverseMapSprite.height = app.renderer.screen.height;
+
+      cursorSprite.width = app.renderer.screen.width;
+      cursorSprite.height = app.renderer.screen.height;
     }
 
     resize();
