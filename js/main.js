@@ -356,7 +356,13 @@
 
         // Update cursor image
         cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-        // cursorCtx.drawImage(dmCanvas, mouseX, mouseY);
+        cursorCtx.globalCompositeOperation='source-over';
+        cursorCtx.drawImage(bmCanvas, 0, 0);
+        cursorCtx.globalAlpha = 1;
+        cursorCtx.globalCompositeOperation='difference';
+        cursorCtx.fillStyle = "white";
+        cursorCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+        cursorCtx.globalCompositeOperation='destination-in';
         cursorCtx.beginPath();
         cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), 10, 0, 2 * Math.PI);
         cursorCtx.stroke();
@@ -684,7 +690,8 @@
     function invert() {
       dmCtx.globalAlpha = 1;
       dmCtx.globalCompositeOperation = 'difference';
-      dmCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
+      dmCtx.fillStyle = 'white';
+      dmCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
     }
 
     function drawFlatLine(path, radius, depth, alpha) {
