@@ -74,9 +74,9 @@
             <form id="pen-form">
               Brush Size
               <div class="range-slider">
-                <input class="range-slider uk-range" id="pen-inner-radius-slider" type="range" value="10" min="0"
+                <input class="range-slider uk-range brush-inner-radius-slider" type="range" value="10" min="1"
                   max="200">
-                <span class="range-slider-val">10</span>
+                <span class="range-slider-val brush-inner-radius-slider-val">10</span>
               </div>
 
               Brush Size Extend
@@ -107,9 +107,9 @@
             <form id="roller-form">
               Brush Size
               <div class="range-slider">
-                <input class="range-slider uk-range" id="roller-inner-radius-slider" type="range" value="10" min="0"
-                  max="500">
-                <span class="range-slider-val">0</span>
+                <input class="range-slider uk-range brush-inner-radius-slider" type="range" value="10" min="1"
+                  max="200">
+                <span class="range-slider-val brush-inner-radius-slider-val">0</span>
               </div>
 
               Depth Value
@@ -123,11 +123,11 @@
           </li>
           <li>
             <form id="smooth-form">
-              Brush size
+              Brush Size
               <div class="range-slider">
-                <input class="range-slider uk-range" id="smooth-inner-radius-slider" type="range" value="10" min="1"
+                <input class="range-slider uk-range brush-inner-radius-slider" type="range" value="10" min="1"
                   max="200">
-                <span class="range-slider-val">10</span>
+                <span class="range-slider-val brush-inner-radius-slider-val">10</span>
               </div>
 
               Smoothness
@@ -216,7 +216,7 @@
 
   </div>
 
-  <div style="margin-left: 320px; height: 100%;">
+  <div style="margin-left: 320px; height: 100%; cursor: crosshair; ">
     <canvas id="canvas" oncontextmenu="return false;"></canvas>
   </div>
 

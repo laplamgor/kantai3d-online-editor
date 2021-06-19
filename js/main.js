@@ -26,7 +26,7 @@
 
     let container = new PIXI.Container();
     let cursorCanvas = document.createElement("CANVAS");
-    let cursorCtx ;
+    let cursorCtx;
     let cursorTexture = PIXI.Texture.EMPTY;
     let cursorSprite = new PIXI.Sprite.from(PIXI.Texture.WHITE);
 
@@ -44,7 +44,7 @@
       needUpdateReverseMapBuffer = true;
 
 
-      
+
       cursorCanvas.width = bmImage.width;
       cursorCanvas.height = bmImage.height;
       cursorCtx = cursorCanvas.getContext('2d');
@@ -152,7 +152,7 @@
     window.displacementFilter.uniforms.displayMode = 2;
 
 
-    
+
 
     container.filters = [window.displacementFilter];
     container.addChild(baseMapSprite);
@@ -357,15 +357,15 @@
         // Update cursor image
         if (!isNaN(curOnTexX) && !isNaN(curOnTexY)) {
           cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-          cursorCtx.globalCompositeOperation='source-over';
+          cursorCtx.globalCompositeOperation = 'source-over';
           cursorCtx.drawImage(bmCanvas, 0, 0);
           cursorCtx.globalAlpha = 1;
-          cursorCtx.globalCompositeOperation='difference';
+          cursorCtx.globalCompositeOperation = 'difference';
           cursorCtx.fillStyle = "white";
           cursorCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
-          cursorCtx.globalCompositeOperation='destination-in';
+          cursorCtx.globalCompositeOperation = 'destination-in';
           cursorCtx.beginPath();
-          cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), 10, 0, 2 * Math.PI);
+          cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), brushSizeSliders[0].value, 0, 2 * Math.PI);
           cursorCtx.stroke();
           cursorTexture.update();
         }
@@ -405,23 +405,23 @@
       strokes[strokes.length - 1].brushId = brushId;
 
       if (isMaskEditing) {
-        strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+        strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
         strokes[strokes.length - 1].value = maskEditingId;
         strokes[strokes.length - 1].isMaskEditing = true;
       } else {
         switch (brushId) {
           default:
           case 0:
-            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('pen-inner-radius-slider').value);
+            strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
             strokes[strokes.length - 1].r2 = parseInt(document.getElementById('pen-outer-radius-slider').value);
             strokes[strokes.length - 1].value = parseInt(document.getElementById('pen-value-slider').value) * penFlip;
             break;
           case 1:
-            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('roller-inner-radius-slider').value);
+            strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
             strokes[strokes.length - 1].value = parseInt(document.getElementById('roller-value-slider').value);
             break;
           case 2:
-            strokes[strokes.length - 1].r1 = parseInt(document.getElementById('smooth-inner-radius-slider').value);
+            strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
             strokes[strokes.length - 1].value = parseInt(document.getElementById('smooth-value-slider').value);
             break; f
         }
@@ -932,7 +932,7 @@
       const tmCtx = tempCanvas.getContext('2d');
       for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
 
-        
+
         let li = document.getElementById('mask-item-' + maskId);
         li.classList.add('mask-non-empty');
 
@@ -1113,6 +1113,18 @@
       document.getElementById('redo-button').disabled = redoList.length == 0;
     });
 
+
+    var brushSizeSliders = document.getElementsByClassName("brush-inner-radius-slider");
+    var brushSizeLabels = document.getElementsByClassName("brush-inner-radius-slider-val");
+    var brushSizeChange = function (e) {
+      for (var i = 0; i < brushSizeSliders.length; i++) {
+        brushSizeSliders[i].value = e.target.value;
+        brushSizeLabels[i].innerHTML = e.target.value;
+      }
+    };
+    for (var i = 0; i < brushSizeSliders.length; i++) {
+      brushSizeSliders[i].addEventListener('input', brushSizeChange, false);
+    }
 
 
     function onKeyDown(key) {
