@@ -55,7 +55,13 @@
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
       <li>
+        <div>
 
+          <canvas id="base-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
+
+          <canvas id="depth-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
+
+        </div>
         <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-bottom"
           id="file-download-button">Download</button>
       </li>
@@ -217,7 +223,7 @@
   </div>
 
   <div style="margin-left: 320px; height: 100%; cursor: crosshair; ">
-    <canvas id="canvas" oncontextmenu="return false;"></canvas>
+    <canvas id="main-canvas" oncontextmenu="return false;"></canvas>
   </div>
 
   <script src="js/main.js"></script>

@@ -5,7 +5,7 @@
     PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
     const app = new PIXI.Application(
       {
-        view: document.querySelector("#canvas"),
+        view: document.querySelector("#main-canvas"),
         autoResize: true
       }
     );
@@ -15,10 +15,10 @@
 
     let bmImageData;
     let bmPath = './f2152.png';
-    let bmCanvas = document.createElement("CANVAS");
+    let bmCanvas = document.querySelector("#base-map-canvas");
     let bmCtx;
     let bmImage = new Image();
-    let bmTexture = PIXI.Texture.EMPTY;
+    let bmTexture;
     let baseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
 
     let reverseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
@@ -38,7 +38,11 @@
       bmCtx.drawImage(bmImage, 0, 0);
       bmImageData = bmCtx.getImageData(0, 0, bmCanvas.width, bmCanvas.height);
 
-      bmTexture = PIXI.Texture.from(bmCanvas);
+      if (!bmTexture) {
+        bmTexture = PIXI.Texture.from(bmCanvas);
+      } else {
+        bmTexture.update();
+      }
       baseMapSprite.texture = bmTexture;
       reverseMapSprite.texture = bmTexture;
       needUpdateReverseMapBuffer = true;
@@ -61,19 +65,19 @@
       window.displacementFilter.uniforms.textureScale = 1.0;
 
 
-      refreshMaskListPanel();
+      resize();
+      refreshMaskListPanel(true);
     }
     bmImage.src = bmPath;
 
 
     // Load depth map as buffer
-    let dmCanvas;
+    let dmCanvas = document.querySelector("#depth-map-canvas");;
     let dmCtx;
     let dmPath = './f2152_depth.png';
     let dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
     dmImage.onload = function () {
-      dmCanvas = document.createElement("CANVAS");
       dmCanvas.width = dmImage.width;
       dmCanvas.height = dmImage.height;
       dmCtx = dmCanvas.getContext('2d');
@@ -85,8 +89,9 @@
       window.displacementFilter.uniforms.displacementMap = dmTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
 
-
-      refreshMaskListPanel();
+      resize();
+      redraw();
+      refreshMaskListPanel(true);
     }
     dmImage.src = dmPath;
 
@@ -182,7 +187,7 @@
 
     let isDrawing = false;
 
-    $('#canvas').bind('mousedown', function (event) {
+    $('#main-canvas').bind('mousedown', function (event) {
       switch (event.button) {
         case 2:
           tiltX = app.renderer.plugins.interaction.mouse.global.x;
@@ -201,7 +206,7 @@
     }
     );
 
-    $('#canvas').bind('mouseup', function (event) {
+    $('#main-canvas').bind('mouseup', function (event) {
       if (event.which == 3 & event.originalEvent.detail == 2) {
         // Double right click to reset the tilt angle
         tiltX = 0;
@@ -227,7 +232,7 @@
     );
 
     window.displacementFilter.uniforms.zoom = 1.0;
-    $('#canvas').bind('mousewheel', function (e) {
+    $('#main-canvas').bind('mousewheel', function (e) {
 
       needUpdateReverseMapBuffer = true;
 
@@ -395,7 +400,6 @@
       cursorSprite.height = app.renderer.screen.height;
     }
 
-    resize();
 
     function startDrawing() {
       if (strokes.length == 0 || strokes[strokes.length - 1].path == null || strokes[strokes.length - 1].path.length > 0) {
@@ -907,19 +911,24 @@
     }
     initMaskListPanel();
 
-    function refreshMaskListPanel() {
+    function refreshMaskListPanel(refrashAll) {
       if (!bmImage.width || !dmCtx || !bmImageData) {
         return;
       }
 
-      let set1 = new Map();
       let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
       let dmdd = dmImageData.data;
-      let bmdd = bmImageData.data;
 
-      for (let j = 0; j < dmdd.length; j += 4) {
-        let maskId = dmdd[j + 1];
-        set1.set(maskId, maskId);
+      let set1 = new Map();
+      if (refrashAll) {
+        for (let j = 0; j < 256; j++) {
+          set1.set(j, j);
+        }
+      } else {
+        for (let j = 0; j < dmdd.length; j += 4) {
+          let maskId = dmdd[j + 1];
+          set1.set(maskId, maskId);
+        }
       }
 
       for (let maskId = 0; maskId < 256; maskId++) {
@@ -938,10 +947,10 @@
 
         // Update thumbnail
         // Draw the temp canvas
-        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
-        let tmdd = tmImageData.data;
         tmCtx.globalCompositeOperation = 'source-over';
         tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+        let tmdd = tmImageData.data;
         for (let j = 3; j < dmdd.length; j += 4) {
           tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
         }
@@ -950,6 +959,7 @@
         tmCtx.drawImage(bmImage, 0, 0);
         let liCanvas = document.getElementById('mask-thumbnail-canvas-' + maskId);
         let ctx = liCanvas.getContext('2d');
+        ctx.clearRect(0, 0, 100, 100);
         ctx.drawImage(tempCanvas, 0, 0, 100, 100);
       }
     }
@@ -1113,7 +1123,7 @@
       document.getElementById('redo-button').disabled = redoList.length == 0;
     });
 
-
+    // Sync the brush size slider across all brushes
     var brushSizeSliders = document.getElementsByClassName("brush-inner-radius-slider");
     var brushSizeLabels = document.getElementsByClassName("brush-inner-radius-slider-val");
     var brushSizeChange = function (e) {
@@ -1125,6 +1135,85 @@
     for (var i = 0; i < brushSizeSliders.length; i++) {
       brushSizeSliders[i].addEventListener('input', brushSizeChange, false);
     }
+
+
+
+    // Drop
+    bmCanvas.addEventListener('drop', dropBaseMap);
+    bmCanvas.addEventListener('dragover', allowDrop);
+    bmCanvas.addEventListener('dragenter', dragenter);
+    bmCanvas.addEventListener('dragleave', dragleave);
+    dmCanvas.addEventListener('drop', dropDepthMap);
+    dmCanvas.addEventListener('dragover', allowDrop);
+    dmCanvas.addEventListener('dragenter', dragenter);
+    dmCanvas.addEventListener('dragleave', dragleave);
+
+    function allowDrop(event) {
+      event.preventDefault();
+    }
+    function dropBaseMap(event) {
+      event.preventDefault();
+      if (event.dataTransfer.files.length != 1) {
+        alert("Please only drag one PNG file at a time!");
+        return;
+      }
+      if ("image/png" !== event.dataTransfer.items[0].type) {
+        alert("Please make sure your file is in PNG format!");
+        return;
+      }
+
+      var img = document.createElement("img");
+      var reader = new FileReader();
+      reader.onload = (function (tmpImg) {
+        return function (e) {
+          tmpImg.onload = function () {
+            if (confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) {
+              bmImage.src = e.target.result;
+            }
+          }
+          tmpImg.src = e.target.result;
+        };
+      })(img);
+      reader.readAsDataURL(event.dataTransfer.files[0]);
+    }
+    function dropDepthMap(event) {
+      event.preventDefault();
+      if (event.dataTransfer.files.length != 1) {
+        alert("Please only drag one PNG file at a time!");
+        return;
+      }
+      if ("image/png" !== event.dataTransfer.items[0].type) {
+        alert("Please make sure your file is in PNG format!");
+        return;
+      }
+
+      var img = document.createElement("img");
+      var reader = new FileReader();
+      reader.onload = (function (tmpImg) {
+        return function (e) {
+          tmpImg.onload = function () {
+            if (confirm('Changing the depth map will reload the depth map with a blank one. Are you sure?')) {
+              dmImage.src = e.target.result;
+              strokes = [];
+              redoList = [];
+            }
+          }
+          tmpImg.src = e.target.result;
+        };
+      })(img);
+      reader.readAsDataURL(event.dataTransfer.files[0]);
+    }
+    function dragenter(event) {
+      event.target.classList.add('uk-dragover');
+    }
+    function dragleave(event) {
+      event.target.classList.remove('uk-dragover');
+    }
+
+
+
+
+
 
 
     function onKeyDown(key) {
