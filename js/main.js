@@ -920,15 +920,9 @@
       let dmdd = dmImageData.data;
 
       let set1 = new Map();
-      if (refrashAll) {
-        for (let j = 0; j < 256; j++) {
-          set1.set(j, j);
-        }
-      } else {
-        for (let j = 0; j < dmdd.length; j += 4) {
-          let maskId = dmdd[j + 1];
-          set1.set(maskId, maskId);
-        }
+      for (let j = 0; j < dmdd.length; j += 4) {
+        let maskId = dmdd[j + 1];
+        set1.set(maskId, maskId);
       }
 
       for (let maskId = 0; maskId < 256; maskId++) {
@@ -939,28 +933,31 @@
 
       let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       const tmCtx = tempCanvas.getContext('2d');
-      for (const [maskId, value] of (new Map([...set1].sort((a, b) => String(a[0]).localeCompare(b[0])))).entries()) {
+      for (let maskId = 0; maskId < 256; maskId++) {
+        if ((set1.get(maskId) === maskId) || refrashAll) {
+          let li = document.getElementById('mask-item-' + maskId);
 
+          if (set1.get(maskId) === maskId) {
+            li.classList.add('mask-non-empty');
+          }
 
-        let li = document.getElementById('mask-item-' + maskId);
-        li.classList.add('mask-non-empty');
-
-        // Update thumbnail
-        // Draw the temp canvas
-        tmCtx.globalCompositeOperation = 'source-over';
-        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
-        let tmdd = tmImageData.data;
-        for (let j = 3; j < dmdd.length; j += 4) {
-          tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
+          // Update thumbnail
+          // Draw the temp canvas
+          tmCtx.globalCompositeOperation = 'source-over';
+          tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+          let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+          let tmdd = tmImageData.data;
+          for (let j = 3; j < dmdd.length; j += 4) {
+            tmdd[j] = dmdd[j - 2] == maskId ? 255 : 0; // a, if it match any given mask, opacity set to 1
+          }
+          tmCtx.putImageData(tmImageData, 0, 0);
+          tmCtx.globalCompositeOperation = 'source-in';
+          tmCtx.drawImage(bmImage, 0, 0);
+          let liCanvas = document.getElementById('mask-thumbnail-canvas-' + maskId);
+          let ctx = liCanvas.getContext('2d');
+          ctx.clearRect(0, 0, 100, 100);
+          ctx.drawImage(tempCanvas, 0, 0, 100, 100);
         }
-        tmCtx.putImageData(tmImageData, 0, 0);
-        tmCtx.globalCompositeOperation = 'source-in';
-        tmCtx.drawImage(bmImage, 0, 0);
-        let liCanvas = document.getElementById('mask-thumbnail-canvas-' + maskId);
-        let ctx = liCanvas.getContext('2d');
-        ctx.clearRect(0, 0, 100, 100);
-        ctx.drawImage(tempCanvas, 0, 0, 100, 100);
       }
     }
 

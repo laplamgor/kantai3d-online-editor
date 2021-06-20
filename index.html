@@ -55,15 +55,33 @@
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
 
       <li>
-        <div>
+        <div class="uk-margin-xlarge-bottom">
+          <h4 class="uk-heading-line uk-text-center"><span>Base Map</span></h1>
 
           <canvas id="base-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
 
+          <h4 class="uk-heading-line uk-text-center"><span>Depth Map</span></h1>
+
           <canvas id="depth-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
 
+              
+            <!-- Bottom button bar -->
+            <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
+            height: 50px; 
+            width: 320px;
+            position: fixed;
+            z-index: 1;
+            bottom: 0;
+            left: 0;
+            overflow-x: hidden;
+            overflow-y: overlay;
+          ">
+            <button class="uk-button uk-button-default uk-padding-remove" id="file-import-button" uk-tooltip="To Import your own base map or depth map, simply drag your file from your computer to the thumbnails above."><i
+                class="material-icons icon-align" disabled>file_upload</i></button>
+            <button class="uk-button uk-button-default uk-padding-remove" id="file-download-button"
+              uk-tooltip="Export Depth Map"><i class="material-icons icon-align">file_download</i></button>
+          </div>
         </div>
-        <button class="uk-button uk-button-default uk-width-1-1 uk-margin-small-bottom"
-          id="file-download-button">Download</button>
       </li>
 
       <!-- Brush page -->
@@ -184,6 +202,7 @@
           </ul>
         </div>
 
+        <!-- Bottom button bar -->
         <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
           height: 50px; 
           width: 320px;
@@ -204,10 +223,7 @@
           <button class="uk-button uk-button-primary uk-padding-remove" id="mask-select-unfilter"
             uk-tooltip="Show All Layers" uk-filter-control hidden><i
               class="material-icons icon-align">filter_alt</i></button>
-
         </div>
-
-
       </li>
 
       <!-- History page -->
