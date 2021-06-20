@@ -900,13 +900,32 @@
           updateMaskIndicator();
         });
 
-        let label = document.createElement("label");
+        // The # number for easier identifying
+        let dd = document.createElement("div")
+        dd.innerText = '#' + maskId;
+        dd.style.float = 'right';
+        dd.style.position = 'absolute';
+        dd.style.height = 'auto';
+        dd.style.bottom = '0';
+        dd.style.right = '0';
+        dd.style.color = 'white';
+        dd.style['font-size'] = '3em';
+        dd.style['font-weight'] = '100';
+        dd.style.display = 'inline-block';
+        dd.style['line-height'] = '1';
 
-        li.appendChild(label);
+        let label = document.createElement("label");
         label.appendChild(a);
         label.appendChild(input);
         label.appendChild(liCanvas);
+
+        li.appendChild(label);
+        li.style.position = 'relative';
+        li.appendChild(dd);
+
         maskList.appendChild(li);
+        maskList.appendChild(li);
+
       }
     }
     initMaskListPanel();
@@ -1166,6 +1185,9 @@
           tmpImg.onload = function () {
             if (confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) {
               bmImage.src = e.target.result;
+
+              // A 300x200 Black PNG
+              dmImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADIAQMAAABoEU4WAAAAA1BMVEUAAACnej3aAAAAHklEQVRYw+3BMQEAAADCIPunNsReYAAAAAAAAAAQHB54AAEGlim3AAAAAElFTkSuQmCC';
             }
           }
           tmpImg.src = e.target.result;
