@@ -39,15 +39,15 @@
       }
     </style>
     <ul class="uk-child-width-expand uk-tab uk-margin-remove uk-background-muted" uk-switcher uk-sticky="offset: 0">
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="File"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="File"><i
             class="material-icons icon-align">photo_library</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Paint"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Paint"><i
             class="material-icons icon-align">edit</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="Masks"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Masks"><i
             class="material-icons icon-align">layers</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="History"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="History"><i
             class="material-icons icon-align">history</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a href="" uk-tooltip="About"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="About"><i
             class="material-icons icon-align">info</i></a></li>
     </ul>
     <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
@@ -56,15 +56,15 @@
         <div class="uk-margin-xlarge-bottom">
           <h4 class="uk-heading-line uk-text-center"><span>Base Map</span></h1>
 
-          <canvas id="base-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
+            <canvas id="base-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
 
-          <h4 class="uk-heading-line uk-text-center"><span>Depth Map</span></h1>
+            <h4 class="uk-heading-line uk-text-center"><span>Depth Map</span></h1>
 
-          <canvas id="depth-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
+              <canvas id="depth-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
 
-              
-            <!-- Bottom button bar -->
-            <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
+
+              <!-- Bottom button bar -->
+              <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
             height: 50px; 
             width: 320px;
             position: fixed;
@@ -74,11 +74,12 @@
             overflow-x: hidden;
             overflow-y: overlay;
           ">
-            <button class="uk-button uk-button-default uk-padding-remove" id="file-import-button" uk-tooltip="To Import your own base map or depth map, simply drag your file from your computer to the thumbnails above."  disabled><i
-                class="material-icons icon-align">file_upload</i></button>
-            <button class="uk-button uk-button-default uk-padding-remove" id="file-download-button"
-              uk-tooltip="Export Depth Map"><i class="material-icons icon-align">file_download</i></button>
-          </div>
+                <button class="uk-button uk-button-default uk-padding-remove" id="file-import-button"
+                  uk-tooltip="To Import your own base map or depth map, simply drag your file from your computer to the thumbnails above."
+                  disabled><i class="material-icons icon-align">file_upload</i></button>
+                <button class="uk-button uk-button-default uk-padding-remove" id="file-download-button"
+                  uk-tooltip="Export Depth Map"><i class="material-icons icon-align">file_download</i></button>
+              </div>
         </div>
       </li>
 
@@ -86,9 +87,9 @@
       <li>
         <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
           uk-switcher="connect: #brush-switcher">
-          <li><a href="#" uk-tooltip="Pen"><i class="material-icons icon-align">brush</i></a></li>
-          <li><a href="#" uk-tooltip="Roller"><i class="material-icons icon-align">format_paint</i></a></li>
-          <li><a href="#" uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
+          <li><a uk-tooltip="Pen"><i class="material-icons icon-align">brush</i></a></li>
+          <li><a uk-tooltip="Roller"><i class="material-icons icon-align">format_paint</i></a></li>
+          <li><a uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
         </ul>
 
         <ul class="uk-switcher uk-margin" id="brush-switcher">
@@ -111,8 +112,8 @@
 
               <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
                 uk-switcher="connect: #pen-flip-switcher">
-                <li><a href="#" uk-tooltip="Convex"><i class="material-icons icon-align">wb_twilight</i></a></li>
-                <li><a href="#" uk-tooltip="Concave"><i class="material-icons icon-align">upcoming</i></a></li>
+                <li><a uk-tooltip="Convex"><i class="material-icons icon-align">wb_twilight</i></a></li>
+                <li><a uk-tooltip="Concave"><i class="material-icons icon-align">upcoming</i></a></li>
               </ul>
 
               Depth Value
@@ -222,8 +223,24 @@
       <!-- History page -->
       <li>
         <div>
-          <button class="uk-button uk-button-default" id="undo-button" disabled>Undo</button>
-          <button class="uk-button uk-button-default" id="redo-button" disabled>Redo</button>
+
+        </div>
+
+        <!-- Bottom button bar -->
+        <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
+            height: 50px; 
+            width: 320px;
+            position: fixed;
+            z-index: 1;
+            bottom: 0;
+            left: 0;
+            overflow-x: hidden;
+            overflow-y: overlay;
+          ">
+          <button class="uk-button uk-button-default uk-padding-remove" id="undo-button" uk-tooltip="Undo" disabled><i
+              class="material-icons icon-align">undo</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="redo-button" uk-tooltip="Undo" disabled><i
+              class="material-icons icon-align">redo</i></button>
         </div>
       </li>
       <li>About</li>
