@@ -360,20 +360,7 @@
         curOnTexY = mouseY + ((g - 128. + (a - 128.) / 256.) / 256.) * window.displacementFilter.uniforms.textureSize[1];
 
         // Update cursor image
-        if (!isNaN(curOnTexX) && !isNaN(curOnTexY)) {
-          cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-          cursorCtx.globalCompositeOperation = 'source-over';
-          cursorCtx.drawImage(bmCanvas, 0, 0);
-          cursorCtx.globalAlpha = 1;
-          cursorCtx.globalCompositeOperation = 'difference';
-          cursorCtx.fillStyle = "white";
-          cursorCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
-          cursorCtx.globalCompositeOperation = 'destination-in';
-          cursorCtx.beginPath();
-          cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), brushSizeSliders[0].value, 0, 2 * Math.PI);
-          cursorCtx.stroke();
-          cursorTexture.update();
-        }
+        updateCursorImage();
       }
 
       window.requestAnimationFrame(step);
@@ -383,6 +370,23 @@
 
     // Listen for window resize events
     window.addEventListener('resize', resize);
+
+    function updateCursorImage() {
+      if (!isNaN(curOnTexX) && !isNaN(curOnTexY)) {
+        cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
+        cursorCtx.globalCompositeOperation = 'source-over';
+        cursorCtx.drawImage(bmCanvas, 0, 0);
+        cursorCtx.globalAlpha = 1;
+        cursorCtx.globalCompositeOperation = 'difference';
+        cursorCtx.fillStyle = "white";
+        cursorCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
+        cursorCtx.globalCompositeOperation = 'destination-in';
+        cursorCtx.beginPath();
+        cursorCtx.arc(Math.round(curOnTexX), Math.round(curOnTexY), brushSizeSliders[0].value, 0, 2 * Math.PI);
+        cursorCtx.stroke();
+        cursorTexture.update();
+      }
+    }
 
     // Resize function window
     function resize() {
