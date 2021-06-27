@@ -576,8 +576,6 @@
           drawMaskLine(strokes[i].path, strokes[i].r1, strokes[i].value);
           maskUpdated = true;
         } else {
-          updateMaskCanvas(strokes[i].mask);
-
           switch (strokes[i].brushId) {
             default:
             case 0:
@@ -590,7 +588,6 @@
               updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
               break; f
           }
-          drawMaskedArea(strokes[i].mask);
         }
       }
 
@@ -728,8 +725,6 @@
       dmContainer.addChild(stroke.lineContainer);
     }
 
-    let maskCanvas;
-
     function getCurrentMaskSelected() {
       let newMasks = { length: 0 };
       for (let i = 0; i < 255; i++) {
@@ -743,42 +738,6 @@
     }
 
 
-    // Call this when the mask data changed 
-    // or user select another set of masks
-    function updateMaskCanvas(newMasks) {
-      if (newMasks.length == 255) {
-        return; // For select-all mask -> dont need to build the mask area
-      }
-
-      maskCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let maskCtx = maskCanvas.getContext('2d');
-      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      let buf = new ArrayBuffer(dmData.data.length);
-      let dmdd = dmData.data;
-      let buf8 = new Uint8ClampedArray(buf);
-
-
-      for (let i = 0; i < dmdd.length; i++) {
-        buf8[i] = dmdd[i]; // r
-        let mask = dmdd[++i]; // g + b channels are storing the mask data
-        buf8[i] = dmdd[i]; // g
-        buf8[++i] = dmdd[i]; // b
-        buf8[++i] = newMasks[mask] == 1 ? 0 : 255; // a, if it match any given mask, opacity set to 1
-      }
-
-      dmData.data.set(buf8);
-      maskCtx.putImageData(dmData, 0, 0);
-    }
-
-    function drawMaskedArea(mask) {
-      if (maskCanvas && mask.length != 255) {
-        // Draw the original image on the masked area
-        // Leaving the changes only on the unmasked area
-        dmCtx.globalCompositeOperation = 'source-over';
-        dmCtx.globalAlpha = 1;
-        dmCtx.drawImage(maskCanvas, 0, 0);
-      }
-    }
 
     function drawFlatLine(stroke, path, radius, depth, alpha, sign) {
       const pixiLine = (new PIXI.Graphics()).lineStyle({
