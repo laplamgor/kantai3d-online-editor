@@ -97,7 +97,7 @@
     let dmPath = './f2152_depth.png';
     let dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
-    
+
     let dmSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dmSprite.name = 'dmSprite';
     dmSprite.width = 600;
@@ -131,8 +131,8 @@
     let reverseMapBuffer;
     let needUpdateReverseMapBuffer = true;
 
-    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
-    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, frag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
+    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
+    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
       if (input && input.width && input.height) {
@@ -176,6 +176,8 @@
     }
 
 
+
+
     window.displacementFilter = PIXI.DepthPerspectiveFilter;
     window.displacementFilter.uniforms.textureScale = 1.0;
     window.displacementFilter.padding = 0;
@@ -193,7 +195,7 @@
     container.filters = [window.displacementFilter];
     container.addChild(dummySprite); // let the filter to "do something"
 
-    
+
     window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
 
     let containerReverseMap = new PIXI.Container();
@@ -218,7 +220,7 @@
     let renderTexture3 = PIXI.RenderTexture.create(600, 800);
     var sprite3 = new PIXI.Sprite(renderTexture3);
     sprite3.name = 'sprite renderTexture3';
-    
+
     let dmContainer = new PIXI.Container();
     dmContainer.name = 'dmContainer';
     dmContainer.addChild(dmSprite);
@@ -598,7 +600,7 @@
       strokeInverseCtx.lineCap = "round";
       strokeInverseCtx.lineJoin = "round";
       strokeInverseCtx.strokeStyle = "rgba(0,0,0,255)";
-      strokeInverseCtx.moveTo(path[0].x  - 0.5, path[0].y - 0.5);
+      strokeInverseCtx.moveTo(path[0].x - 0.5, path[0].y - 0.5);
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
         strokeInverseCtx.lineTo(point.x - 0.5, point.y - 0.5);
@@ -678,7 +680,7 @@
         sign = 0;
       }
 
-      
+
       if (stroke.lines) {
         for (let index = 0; index < stroke.lines.length; ++index) {
           stroke.lines[index].destroy();
@@ -774,35 +776,31 @@
 
     function drawFlatLine(stroke, path, radius, depth, alpha, sign) {
       const pixiLine = (new PIXI.Graphics()).lineStyle({
-          width: radius * 2. - 1.,
-          color: depth << 16 + 0 + 0,
-          alignment: 0.5,
-          alpha: 1,
-          join: 'round',
-          cap: 'round',
-          miterLimit: 198
-        })
+        width: radius * 2. - 1.,
+        color: depth << 16 + 0 + 0,
+        alignment: 0.5,
+        join: 'round',
+        cap: 'round'
+      })
         .moveTo(path[0].x - 0.5, path[0].y - 0.5);
       pixiLine.name = 'flatLine a:' + alpha + ' r:' + radius;
 
-      // pixiLine.alpha = alpha / 256.0;
-
-      const colorMatrix = new PIXI.filters.AlphaFilter();
-      colorMatrix.alpha = alpha / 256.0;
+      const brushFilter = new BrushFilter();
+      brushFilter.alpha = alpha / 256.0;
       if (sign > 0) {
-        colorMatrix.blendMode = PIXI.BLEND_MODES.ADD;
+        brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
       } else if (sign < 0) {
-        colorMatrix.blendMode = PIXI.BLEND_MODES.SUBTRACT;
+        brushFilter.blendMode = PIXI.BLEND_MODES.SUBTRACT;
       } else {
-        colorMatrix.alpha = 1;
+        brushFilter.alpha = 1;
       }
-      pixiLine.filters = [colorMatrix];
+      pixiLine.filters = [brushFilter];
 
 
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
 
-        pixiLine.lineTo(point.x - 0.5, point.y  - 0.5);
+        pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
       }
 
       stroke.lines.push(pixiLine);
@@ -1149,7 +1147,7 @@
       tmCtx.lineCap = "round";
       tmCtx.lineJoin = "round";
       tmCtx.strokeStyle = "rgba(" + 0 + "," + value + "," + 0 + "," + 255 + ")";
-      tmCtx.moveTo(path[0].x  - 0.5, path[0].y  - 0.5);
+      tmCtx.moveTo(path[0].x - 0.5, path[0].y - 0.5);
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
         tmCtx.lineTo(point.x - 0.5, point.y - 0.5);
@@ -1171,7 +1169,7 @@
     }
 
 
-    
+
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
@@ -1349,8 +1347,32 @@
 
   }
 
+  class BrushFilter extends PIXI.Filter {
+    constructor(alpha = 1.0) {
+      super(null, brushFrag, { uAlpha: 1 });
+      this.alpha = alpha;
+    }
+    get alpha() {
+      return this.uniforms.uAlpha;
+    }
+    set alpha(value) {
+      this.uniforms.uAlpha = value;
+    }
+  }
+  let brushFrag =
+    `
+varying vec2 vTextureCoord;
 
-  let frag =
+uniform sampler2D uSampler;
+uniform float uAlpha;
+
+void main(void)
+{
+   gl_FragColor = texture2D(uSampler, vTextureCoord) * uAlpha;
+}
+`;
+
+  let displacementFrag =
     `precision mediump float;
 uniform vec2 offset;
 uniform vec2 pan;
