@@ -564,10 +564,10 @@
           switch (strokes[i].brushId) {
             default:
             case 0:
-              drawSmoothLine(strokes[i].path, strokes[i].r1, strokes[i].r2, strokes[i].value, false);
+              drawSmoothLine(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].r2, strokes[i].value, false);
               break;
             case 1:
-              drawSmoothLine(strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
+              drawSmoothLine(strokes[i], strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
               break;
             case 2:
               updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
@@ -659,13 +659,13 @@
     }
 
 
-    function drawSmoothLine(path, innerRadius, outerRadius, value, isAbsolute) {
+    function drawSmoothLine(stroke, path, innerRadius, outerRadius, value, isAbsolute) {
       let depth;
       if (!isAbsolute) {
         if (value < 0) {
           // Darken delta brush = invert then lighter brush then invert
           invert();
-          drawSmoothLine(path, innerRadius, outerRadius, -value, isAbsolute)
+          drawSmoothLine(stroke, path, innerRadius, outerRadius, -value, isAbsolute)
           invert();
           return;
         } else {
@@ -687,7 +687,7 @@
         // Drawing threshold
         // if the alpha is too low, the canvas will not be able to result any change
         if (alphaNeeded * dmCtx.globalAlpha >= 1. / 256 / 2) {
-          drawFlatLine(path, i, depth, alphaNeeded);
+          drawFlatLine(stroke, path, i, depth, alphaNeeded);
           alphaSum = targetAlpha;
         }
       }
@@ -695,7 +695,7 @@
       // Draw the solid center part
       if (innerRadius + outerRadius != 0) {
         let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
-        drawFlatLine(path, innerRadius, depth, alphaNeeded);
+        drawFlatLine(stroke, path, innerRadius, depth, alphaNeeded);
       }
     }
 
@@ -760,7 +760,7 @@
       dmCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
     }
 
-    function drawFlatLine(path, radius, depth, alpha) {
+    function drawFlatLine(stroke, path, radius, depth, alpha) {
       dmCtx.beginPath();
       dmCtx.lineWidth = radius * 2. - 1.;
       dmCtx.lineCap = "round";
@@ -770,28 +770,41 @@
 
 
 
+      if (stroke.lines) {
+        for (let index = 0; index < stroke.lines.length; ++index) {
+          stroke.lines[index].destroy();
+        }
+      }
+      stroke.lines = [];
 
-      const lines = (new PIXI.Graphics()).lineStyle({
+      const pixiLine = (new PIXI.Graphics()).lineStyle({
           width: radius * 2. - 1.,
           color: depth << 16 + 0 + 0,
           alignment: 0.5,
-          alpha: alpha / 256.0,
+          alpha: 1,
           join: 'round',
           cap: 'round',
           miterLimit: 198
         })
         .moveTo(path[0].x - 0.5, path[0].y - 0.5);
 
+      // pixiLine.alpha = alpha / 256.0;
+      pixiLine.blendMode = PIXI.BLEND_MODES.ADD;
+
+      const colorMatrix = new PIXI.filters.AlphaFilter();
+      colorMatrix.alpha = alpha / 256.0;
+      pixiLine.filters = [colorMatrix];
 
 
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
         dmCtx.lineTo(point.x - 0.5, point.y  - 0.5);
 
-        lines.lineTo(point.x - 0.5, point.y  - 0.5);
+        pixiLine.lineTo(point.x - 0.5, point.y  - 0.5);
       }
       dmCtx.stroke();
-      dmContainer.addChild(lines);
+      stroke.lines.push(pixiLine);
+      dmContainer.addChild(pixiLine);
     }
 
 
