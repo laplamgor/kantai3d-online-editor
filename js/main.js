@@ -233,14 +233,14 @@
     dmContainer.name = 'dmContainer';
     dmContainer.addChild(dmSprite);
 
-    
+
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
     maskContainer.addChild(maskSprite);
 
     app.stage.addChild(bmContainer);
     app.stage.addChild(bmRTsprite);
-    
+
     app.stage.addChild(maskContainer);
 
     app.stage.addChild(dmContainer);
@@ -793,6 +793,7 @@
 
       const brushFilter = new BrushFilter();
       brushFilter.alpha = alpha;
+      brushFilter.maskMap = maskSprite.texture;
       if (sign > 0) {
         brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
       } else if (sign < 0) {
@@ -811,6 +812,18 @@
 
       stroke.lines.push(pixiLine);
       stroke.lineContainer.addChild(pixiLine);
+
+      let bounds = stroke.lineContainer.getBounds();
+      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(bounds.width))), 1: Math.pow(2, Math.ceil(Math.log2(bounds.height))) };
+      brushFilter.brushPos = { 0: bounds.x, 1: bounds.y };
+      brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
+      brushFilter.maskIds = Array(256).fill(0);
+      for (let i = 0; i < 256; i++) {
+        brushFilter.maskIds[i] = stroke.mask[i];
+      }
+      console.log(brushFilter.brushSize);
+      console.log(brushFilter.brushPos);
+      console.log(brushFilter.canvasSize);
     }
 
 
@@ -1355,7 +1368,7 @@
 
   class BrushFilter extends PIXI.Filter {
     constructor(alpha = 1.0) {
-      super(null, brushFrag, { uAlpha: 1 });
+      super(null, brushFrag, { uAlpha: 1, maskMap: PIXI.Texture.EMPTY, maskIds: new Array(256) });
       this.alpha = alpha;
     }
     get alpha() {
@@ -1363,6 +1376,36 @@
     }
     set alpha(value) {
       this.uniforms.uAlpha = value;
+    }
+    get maskMap() {
+      return this.uniforms.uAlpha;
+    }
+    set maskMap(value) {
+      this.uniforms.maskMap = value;
+    }
+    get maskIds() {
+      return this.uniforms.maskIds;
+    }
+    set maskIds(value) {
+      this.uniforms.maskIds = value;
+    }
+    get brushSize() {
+      return this.uniforms.brushSize;
+    }
+    set brushSize(value) {
+      this.uniforms.brushSize = value;
+    }
+    get brushPos() {
+      return this.uniforms.brushPos;
+    }
+    set brushPos(value) {
+      this.uniforms.brushPos = value;
+    }
+    get canvasSize() {
+      return this.uniforms.canvasSize;
+    }
+    set canvasSize(value) {
+      this.uniforms.canvasSize = value;
     }
   }
   let brushFrag =
@@ -1372,9 +1415,35 @@ varying vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform float uAlpha;
 
+uniform sampler2D maskMap;
+uniform int maskIds[256];
+
+uniform vec2 brushSize;
+uniform vec2 brushPos;
+uniform vec2 canvasSize;
+
+
+float getMaskColor(vec2 coord)
+{
+  return (texture2D(maskMap, (coord * brushSize + brushPos) / canvasSize) * uAlpha)[1];
+}
+
+bool checkSelection(vec2 coord) {
+  float f = getMaskColor(coord);
+  highp int index = int(f * 256.0);
+  for (int i = 0; i < 256; i++) {
+    if (index == i) return maskIds[i] == 1;
+  }
+  return false;
+}
+
 void main(void)
 {
-   gl_FragColor = texture2D(uSampler, vTextureCoord) * uAlpha;
+  if (checkSelection(vTextureCoord)) {
+    gl_FragColor = texture2D(uSampler, vTextureCoord) * uAlpha;
+  } else {
+    gl_FragColor =  vec4(0, 0, 0, 0);
+  }
 }
 `;
 
