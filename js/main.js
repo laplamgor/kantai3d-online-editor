@@ -26,14 +26,21 @@
 
     let bm3Texture;
     let baseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    baseMapSprite.name = 'baseMapSprite';
+    baseMapSprite.width = 600;
+    baseMapSprite.height = 800;
+    baseMapSprite.transform.scale.x = 1;
+    baseMapSprite.transform.scale.x = 1;
 
     let reverseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    reverseMapSprite.name = 'reverseMapSprite';
 
 
     let container = new PIXI.Container();
     let cursorCanvas = document.createElement("CANVAS");
     let cursorCtx;
     let dummySprite = new PIXI.Sprite.from(PIXI.Texture.WHITE); // Without this, PIXI will over-optimize to skip the shader
+    dummySprite.name = 'dummySprite';
 
     // Load base map as buffer
     bmImage.onload = function () {
@@ -65,7 +72,7 @@
       needUpdateReverseMapBuffer = true;
 
 
-      window.displacementFilter.uniforms.baseMap = bm3Texture;
+      window.displacementFilter.uniforms.baseMap = renderTexture2;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
       cursorCanvas.width = bmImage.width;
@@ -90,6 +97,14 @@
     let dmPath = './f2152_depth.png';
     let dmImage = new Image();
     let dmTexture = PIXI.Texture.EMPTY;
+    
+    let dmSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    dmSprite.name = 'dmSprite';
+    dmSprite.width = 600;
+    dmSprite.height = 800;
+    dmSprite.transform.scale.x = 1;
+    dmSprite.transform.scale.x = 1;
+
     dmImage.onload = function () {
       dmCanvas.width = dmImage.width;
       dmCanvas.height = dmImage.height;
@@ -99,10 +114,11 @@
       dmCtx.drawImage(dmImage, 0, 0);
 
       dmTexture = PIXI.Texture.from(dmCanvas);
-      window.displacementFilter.uniforms.displacementMap = dmTexture;
+      dmSprite.texture = dmTexture;
+      window.displacementFilter.uniforms.displacementMap = renderTexture3;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
 
-      window.displacementFilter.uniforms.baseMap = bm3Texture;
+      window.displacementFilter.uniforms.baseMap = renderTexture2;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
 
@@ -177,6 +193,7 @@
     container.filters = [window.displacementFilter];
     container.addChild(dummySprite); // let the filter to "do something"
 
+    
     window.offsetFilter = PIXI.DepthPerspectiveOffsetFilter;
 
     let containerReverseMap = new PIXI.Container();
@@ -187,6 +204,30 @@
 
     app.stage.addChild(containerReverseMap);
     app.stage.addChild(container);
+
+
+    let renderTexture2 = PIXI.RenderTexture.create(600, 800);
+    var sprite2 = new PIXI.Sprite(renderTexture2);
+    sprite2.name = 'sprite renderTexture2';
+    let bmContainer = new PIXI.Container();
+    bmContainer.name = 'bmContainer';
+    bmContainer.addChild(baseMapSprite);
+
+
+
+    let renderTexture3 = PIXI.RenderTexture.create(600, 800);
+    var sprite3 = new PIXI.Sprite(renderTexture3);
+    sprite3.name = 'sprite renderTexture3';
+    
+    let dmContainer = new PIXI.Container();
+    dmContainer.name = 'dmContainer';
+    dmContainer.addChild(dmSprite);
+
+
+    app.stage.addChild(bmContainer);
+    app.stage.addChild(sprite2);
+    app.stage.addChild(dmContainer);
+    app.stage.addChild(sprite3);
 
 
     let tiltX;
@@ -374,6 +415,8 @@
         // Update cursor image
         updateCursorImage();
       }
+      app.renderer.render(bmContainer, renderTexture2);
+      app.renderer.render(dmContainer, renderTexture3);
 
       window.requestAnimationFrame(step);
     }
@@ -409,9 +452,6 @@
       // Resize the renderer
       const parent = app.view.parentNode;
       app.renderer.resize(parent.clientWidth, parent.clientHeight);
-
-      baseMapSprite.width = app.renderer.screen.width;
-      baseMapSprite.height = app.renderer.screen.height;
 
       reverseMapSprite.width = app.renderer.screen.width;
       reverseMapSprite.height = app.renderer.screen.height;
@@ -728,11 +768,30 @@
       dmCtx.strokeStyle = "rgba(" + depth + "," + 0 + "," + 0 + "," + alpha + ")";
       dmCtx.moveTo(path[0].x - 0.5, path[0].y - 0.5);
 
+
+
+
+      const lines = (new PIXI.Graphics()).lineStyle({
+          width: radius * 2. - 1.,
+          color: depth << 16 + 0 + 0,
+          alignment: 0.5,
+          alpha: alpha / 256.0,
+          join: 'round',
+          cap: 'round',
+          miterLimit: 198
+        })
+        .moveTo(path[0].x - 0.5, path[0].y - 0.5);
+
+
+
       for (let index = 0; index < path.length; ++index) {
         let point = path[index];
         dmCtx.lineTo(point.x - 0.5, point.y  - 0.5);
+
+        lines.lineTo(point.x - 0.5, point.y  - 0.5);
       }
       dmCtx.stroke();
+      dmContainer.addChild(lines);
     }
 
 
@@ -1096,6 +1155,8 @@
       dmCtx.putImageData(dmData, 0, 0);
     }
 
+
+    
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
