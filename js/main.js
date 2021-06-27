@@ -72,7 +72,7 @@
       needUpdateReverseMapBuffer = true;
 
 
-      window.displacementFilter.uniforms.baseMap = renderTexture2;
+      window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
       cursorCanvas.width = bmImage.width;
@@ -105,6 +105,13 @@
     dmSprite.transform.scale.x = 1;
     dmSprite.transform.scale.x = 1;
 
+    let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    maskSprite.name = 'maskSprite';
+    maskSprite.width = 600;
+    maskSprite.height = 800;
+    maskSprite.transform.scale.x = 1;
+    maskSprite.transform.scale.x = 1;
+
     dmImage.onload = function () {
       dmCanvas.width = dmImage.width;
       dmCanvas.height = dmImage.height;
@@ -115,10 +122,11 @@
 
       dmTexture = PIXI.Texture.from(dmCanvas);
       dmSprite.texture = dmTexture;
-      window.displacementFilter.uniforms.displacementMap = renderTexture3;
+      maskSprite.texture = dmTexture;
+      window.displacementFilter.uniforms.displacementMap = dmRenderTexture;
       window.offsetFilter.uniforms.displacementMap = dmTexture;
 
-      window.displacementFilter.uniforms.baseMap = renderTexture2;
+      window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
 
@@ -208,28 +216,35 @@
     app.stage.addChild(container);
 
 
-    let renderTexture2 = PIXI.RenderTexture.create(600, 800);
-    var sprite2 = new PIXI.Sprite(renderTexture2);
-    sprite2.name = 'sprite renderTexture2';
+    let bmRenderTexture = PIXI.RenderTexture.create(600, 800);
+    var bmRTsprite = new PIXI.Sprite(bmRenderTexture);
+    bmRTsprite.name = 'sprite renderTexture2';
     let bmContainer = new PIXI.Container();
     bmContainer.name = 'bmContainer';
     bmContainer.addChild(baseMapSprite);
 
 
 
-    let renderTexture3 = PIXI.RenderTexture.create(600, 800);
-    var sprite3 = new PIXI.Sprite(renderTexture3);
-    sprite3.name = 'sprite renderTexture3';
+    let dmRenderTexture = PIXI.RenderTexture.create(600, 800);
+    var dmRTsprite = new PIXI.Sprite(dmRenderTexture);
+    dmRTsprite.name = 'dmRTsprite';
 
     let dmContainer = new PIXI.Container();
     dmContainer.name = 'dmContainer';
     dmContainer.addChild(dmSprite);
 
+    
+    let maskContainer = new PIXI.Container();
+    maskContainer.name = 'maskContainer';
+    maskContainer.addChild(maskSprite);
 
     app.stage.addChild(bmContainer);
-    app.stage.addChild(sprite2);
+    app.stage.addChild(bmRTsprite);
+    
+    app.stage.addChild(maskContainer);
+
     app.stage.addChild(dmContainer);
-    app.stage.addChild(sprite3);
+    app.stage.addChild(dmRTsprite);
 
 
     let tiltX;
@@ -417,8 +432,8 @@
         // Update cursor image
         updateCursorImage();
       }
-      app.renderer.render(bmContainer, renderTexture2);
-      app.renderer.render(dmContainer, renderTexture3);
+      app.renderer.render(bmContainer, bmRenderTexture);
+      app.renderer.render(dmContainer, dmRenderTexture);
 
       window.requestAnimationFrame(step);
     }
@@ -670,7 +685,7 @@
           return;
         } else {
           dmCtx.globalAlpha = value * 1. / 256;
-          depth = 255;
+          depth = value;
           dmCtx.globalCompositeOperation = 'lighter';
         }
       } else {
@@ -698,7 +713,7 @@
         let alphaNeeded = (targetAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
         // Drawing threshold
         // if the alpha is too low, the canvas will not be able to result any change
-        if (alphaNeeded * dmCtx.globalAlpha >= 1. / 256 * 4) {
+        if (alphaNeeded * dmCtx.globalAlpha >= 1. / 256 * 2) {
           drawFlatLine(stroke, path, i, depth, alphaNeeded, sign);
           alphaSum = targetAlpha;
         }
@@ -755,7 +770,6 @@
       maskCtx.putImageData(dmData, 0, 0);
     }
 
-
     function drawMaskedArea(mask) {
       if (maskCanvas && mask.length != 255) {
         // Draw the original image on the masked area
@@ -764,14 +778,6 @@
         dmCtx.globalAlpha = 1;
         dmCtx.drawImage(maskCanvas, 0, 0);
       }
-    }
-
-
-    function invert() {
-      dmCtx.globalAlpha = 1;
-      dmCtx.globalCompositeOperation = 'difference';
-      dmCtx.fillStyle = 'white';
-      dmCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
     }
 
     function drawFlatLine(stroke, path, radius, depth, alpha, sign) {
@@ -786,7 +792,7 @@
       pixiLine.name = 'flatLine a:' + alpha + ' r:' + radius;
 
       const brushFilter = new BrushFilter();
-      brushFilter.alpha = alpha / 256.0;
+      brushFilter.alpha = alpha;
       if (sign > 0) {
         brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
       } else if (sign < 0) {
