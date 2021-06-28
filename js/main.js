@@ -37,8 +37,6 @@
 
 
     let container = new PIXI.Container();
-    let cursorCanvas = document.createElement("CANVAS");
-    let cursorCtx;
     let dummySprite = new PIXI.Sprite.from(PIXI.Texture.WHITE); // Without this, PIXI will over-optimize to skip the shader
     dummySprite.name = 'dummySprite';
 
@@ -75,9 +73,6 @@
       window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
-      cursorCanvas.width = bmImage.width;
-      cursorCanvas.height = bmImage.height;
-      cursorCtx = cursorCanvas.getContext('2d');
 
       window.displacementFilter.uniforms.textureWidth = bmImage.width;
       window.displacementFilter.uniforms.textureHeight = bmImage.height;
@@ -217,11 +212,15 @@
 
 
     let bmRenderTexture = PIXI.RenderTexture.create(600, 800);
-    var bmRTsprite = new PIXI.Sprite(bmRenderTexture);
-    bmRTsprite.name = 'sprite renderTexture2';
+    var bmRenderTextureSprite = new PIXI.Sprite(bmRenderTexture);
+    bmRenderTextureSprite.name = 'sprite bmRenderTextureSprite';
     let bmContainer = new PIXI.Container();
     bmContainer.name = 'bmContainer';
     bmContainer.addChild(baseMapSprite);
+
+    let cursorContainer = new PIXI.Container();
+    cursorContainer.name = 'cursorContainer';
+    bmContainer.addChild(cursorContainer);
 
 
 
@@ -239,12 +238,12 @@
     maskContainer.addChild(maskSprite);
 
     app.stage.addChild(bmContainer);
-    app.stage.addChild(bmRTsprite);
 
     app.stage.addChild(maskContainer);
 
     app.stage.addChild(dmContainer);
     app.stage.addChild(dmRTsprite);
+    app.stage.addChild(bmRenderTextureSprite);
 
 
     let tiltX;
@@ -445,22 +444,20 @@
 
     function updateCursorImage() {
       if (!isNaN(curOnTexX) && !isNaN(curOnTexY)) {
-        cursorCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-        cursorCtx.globalCompositeOperation = 'source-over';
-        cursorCtx.drawImage(bm1Canvas, 0, 0);
-        cursorCtx.globalAlpha = 1;
-        cursorCtx.globalCompositeOperation = 'difference';
-        cursorCtx.fillStyle = "white";
-        cursorCtx.fillRect(0, 0, dmCanvas.width, dmCanvas.height);
-        cursorCtx.globalCompositeOperation = 'destination-in';
-        cursorCtx.beginPath();
-        cursorCtx.arc(Math.round(curOnTexX) - 0.5, Math.round(curOnTexY) - 0.5, brushSizeSliders[0].value, 0, 2 * Math.PI);
-        cursorCtx.stroke();
-
         bm3Ctx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
         bm3Ctx.drawImage(bm2Canvas, 0, 0);
-        bm3Ctx.drawImage(cursorCanvas, 0, 0);
         bm3Texture.update();
+
+        while (cursorContainer.children[0]) {
+          cursorContainer.removeChild(cursorContainer.children[0]);
+        }
+        let graphics = new PIXI.Graphics();
+        graphics.blendMode = PIXI.BLEND_MODES.ADD;
+        graphics.alpha = 0.5;
+        const circle = graphics.lineStyle({
+          width: 0, alignment: 0.5
+        }).beginFill((128 << 16) + (128 << 8) + 255).drawCircle(Math.round(curOnTexX) - 0.5, Math.round(curOnTexY) - 0.5, brushSizeSliders[0].value - 0.5).endFill();
+        cursorContainer.addChild(circle);
       }
     }
 
@@ -757,7 +754,7 @@
         // Single point only, cannot use path
         const circle = graphics.lineStyle({
           width: 0, alignment: 0.5
-        }).beginFill(depth << 16 + 0 + 0).drawCircle(path[0].x - 0.5, path[0].y - 0.5, radius).endFill();
+        }).beginFill(depth << 16 + 0 + 0).drawCircle(path[0].x - 0.5, path[0].y - 0.5, radius - 0.5).endFill();
         circle.name = 'circle a:' + alpha + ' r:' + radius;
       } else {
         // Multi points line
