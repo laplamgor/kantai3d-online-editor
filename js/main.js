@@ -48,7 +48,6 @@
       bm1Ctx.drawImage(bmImage, 0, 0);
       bm1ImageData = bm1Ctx.getImageData(0, 0, bmImage.width, bmImage.height);
 
-
       bm2Canvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       bm2Ctx = bm2Canvas.getContext('2d');
       bm2Ctx.drawImage(bmImage, 0, 0);
@@ -241,9 +240,9 @@
 
     app.stage.addChild(maskContainer);
 
-    app.stage.addChild(dmContainer);
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
+    app.stage.addChild(dmContainer);
 
 
     let tiltX;
@@ -582,7 +581,7 @@
               drawSmoothLine(strokes[i], strokes[i].path, strokes[i].r1, 0, strokes[i].value, true);
               break;
             case 2:
-              updateMedianMask(strokes[i].path, strokes[i].r1, strokes[i].value);
+              drawSmoothLine(strokes[i], strokes[i].path, strokes[i].r1, 0, strokes[i].value, false, 1, true);
               break; f
           }
         }
@@ -596,86 +595,12 @@
     }
 
 
-
-    function updateMedianMask(path, radius, blurRadius) {
-      // Prepare the original image but earsed the stroke area
-      // With very shape edge
-      let strokeInverseCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let strokeInverseCtx = strokeInverseCanvas.getContext('2d');
-      strokeInverseCtx.drawImage(dmCanvas, 0, 0);
-      strokeInverseCtx.globalCompositeOperation = 'destination-out'; // eraser effect
-      strokeInverseCtx.beginPath();
-      strokeInverseCtx.lineWidth = radius * 2. - 1.;
-      strokeInverseCtx.lineCap = "round";
-      strokeInverseCtx.lineJoin = "round";
-      strokeInverseCtx.strokeStyle = "rgba(0,0,0,255)";
-      strokeInverseCtx.moveTo(path[0].x - 0.5, path[0].y - 0.5);
-      for (let index = 0; index < path.length; ++index) {
-        let point = path[index];
-        strokeInverseCtx.lineTo(point.x - 0.5, point.y - 0.5);
-      }
-      strokeInverseCtx.stroke();
-      let strokeInverseData = strokeInverseCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      let sidd = strokeInverseData.data;
-      for (let i = 3; i < sidd.length; i += 4) {
-        sidd[i] = sidd[i] < 255 ? 0 : 255; // a, make it shape
-      }
-      strokeInverseCtx.putImageData(strokeInverseData, 0, 0);
-
-      // Prepare the original image with only the stroke area
-      let strokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let strokeCtx = strokeCanvas.getContext('2d');
-      strokeCtx.drawImage(dmCanvas, 0, 0);
-      let strokeData = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      let sdd = strokeData.data;
-      for (let i = 3; i < sdd.length; i += 4) {
-        sdd[i] = sidd[i] < 255 ? 255 : 0; // invert of strokeInverse
-      }
-      strokeCtx.putImageData(strokeData, 0, 0);
-
-      // draw the stroke canvas multiple time with offset
-      // to have a Dilation effect before bluring
-      // So that after apply the blur filter, the edge of image will not become transparent
-      let expandedStrokeCanvas = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-      let expandedStrokeCtx = expandedStrokeCanvas.getContext('2d');
-      for (let i = blurRadius + 5; i > 0; i--) { // From outter to inner
-        for (let j = -i; j < i; j++) {
-          // Draw the point on each of the edges (square)
-          expandedStrokeCtx.drawImage(strokeCanvas, -i, j);
-          expandedStrokeCtx.drawImage(strokeCanvas, j, i);
-          expandedStrokeCtx.drawImage(strokeCanvas, i, -j);
-          expandedStrokeCtx.drawImage(strokeCanvas, -j, -i);
-        }
-      }
-      expandedStrokeCtx.drawImage(strokeCanvas, 0, 0); // Center
-
-      // Blur canvas with padding
-      // transparent effect on the edge causing poor image in Chromium as dithering is enabled
-      // p.s. reusing the strokeCtx object
-      strokeCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-      strokeCtx.globalCompositeOperation = 'source-over';
-      strokeCtx.globalAlpha = 1;
-      strokeCtx.filter = 'blur(' + blurRadius / 2 + 'px)';
-      strokeCtx.drawImage(expandedStrokeCanvas, 0, 0);
-      sdd = strokeCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height).data;
-
-
-
-      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      let dmdd = dmData.data;
-      for (let i = 0; i < dmdd.length; i += 4) {
-        dmdd[i] = sidd[i + 3] < 255 ? sdd[i] : sidd[i]; // copy from the blur canvas
-      }
-      dmCtx.putImageData(dmData, 0, 0);
-    }
-
-
-    function drawSmoothLine(stroke, path, innerRadius, outerRadius, value, isAbsolute, sign = 1) {
+    function drawSmoothLine(stroke, path, innerRadius, outerRadius, value, isAbsolute, sign = 1, isBlur = false) {
       let depth;
       if (!isAbsolute) {
         if (value < 0) {
           // Darken delta brush = invert then lighter brush then invert
-          drawSmoothLine(stroke, path, innerRadius, outerRadius, -value, isAbsolute, -1)
+          drawSmoothLine(stroke, path, innerRadius, outerRadius, -value, isAbsolute, -1, isBlur)
           return;
         } else {
           dmCtx.globalAlpha = value * 1. / 256;
@@ -708,7 +633,7 @@
         // Drawing threshold
         // if the alpha is too low, the canvas will not be able to result any change
         if (alphaNeeded * dmCtx.globalAlpha >= 1. / 256 * 2) {
-          drawFlatLine(stroke, path, i, depth, alphaNeeded, sign);
+          drawFlatLine(stroke, path, i, depth, alphaNeeded, sign, isBlur);
           alphaSum = targetAlpha;
         }
       }
@@ -716,7 +641,7 @@
       // Draw the solid center part
       if (innerRadius + outerRadius != 0) {
         let alphaNeeded = (dmCtx.globalAlpha - alphaSum) / (1 - alphaSum) / dmCtx.globalAlpha;
-        drawFlatLine(stroke, path, innerRadius, depth, alphaNeeded, sign);
+        drawFlatLine(stroke, path, innerRadius, depth, alphaNeeded, sign, isBlur);
       }
 
       dmContainer.addChild(stroke.lineContainer);
@@ -736,18 +661,31 @@
 
 
 
-    function drawFlatLine(stroke, path, radius, depth, alpha, sign) {
+    function drawFlatLine(stroke, path, radius, depth, alpha, sign, isBlur) {
       const graphics = new PIXI.Graphics();
 
-      const brushFilter = new BrushFilter();
-      brushFilter.alpha = alpha;
-      brushFilter.maskMap = maskSprite.texture;
-      if (sign > 0) {
-        brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
-      } else if (sign < 0) {
-        brushFilter.blendMode = PIXI.BLEND_MODES.SUBTRACT;
-      } else {
+      let brushFilter;
+      if (isBlur) {
+        brushFilter = new BlurFilter();
+        brushFilter.maskMap = maskSprite.texture;
+        brushFilter.depthMap = dmTexture;
+
         brushFilter.alpha = 1; // roller mode
+        graphics.filters = [brushFilter];
+
+      } else {
+        brushFilter = new BrushFilter();
+        brushFilter.maskMap = maskSprite.texture;
+        if (sign > 0) {
+          brushFilter.alpha = alpha;
+          brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
+        } else if (sign < 0) {
+          brushFilter.alpha = alpha;
+          brushFilter.blendMode = PIXI.BLEND_MODES.SUBTRACT;
+        } else {
+          brushFilter.alpha = 1; // roller mode
+        }
+        graphics.filters = [brushFilter];
       }
 
       if (path.length == 1) {
@@ -773,7 +711,6 @@
         }
       }
 
-      graphics.filters = [brushFilter];
 
       stroke.lines.push(graphics);
       stroke.lineContainer.addChild(graphics);
@@ -1331,6 +1268,132 @@
 
   }
 
+
+  class BlurFilter extends PIXI.Filter {
+    constructor(alpha = 1.0) {
+      super(null, blurFrag, { uAlpha: 1, maskMap: PIXI.Texture.EMPTY, depthMap: PIXI.Texture.EMPTY, maskIds: new Array(256) });
+      this.alpha = alpha;
+    }
+    get alpha() {
+      return this.uniforms.uAlpha;
+    }
+    set alpha(value) {
+      this.uniforms.uAlpha = value;
+    }
+    get maskMap() {
+      return this.uniforms.maskMap;
+    }
+    set maskMap(value) {
+      this.uniforms.maskMap = value;
+    }
+    get depthMap() {
+      return this.uniforms.depthMap;
+    }
+    set depthMap(value) {
+      this.uniforms.depthMap = value;
+    }
+    get maskIds() {
+      return this.uniforms.maskIds;
+    }
+    set maskIds(value) {
+      this.uniforms.maskIds = value;
+    }
+    get brushSize() {
+      return this.uniforms.brushSize;
+    }
+    set brushSize(value) {
+      this.uniforms.brushSize = value;
+    }
+    get brushPos() {
+      return this.uniforms.brushPos;
+    }
+    set brushPos(value) {
+      this.uniforms.brushPos = value;
+    }
+    get canvasSize() {
+      return this.uniforms.canvasSize;
+    }
+    set canvasSize(value) {
+      this.uniforms.canvasSize = value;
+    }
+  }
+  let blurFrag =
+    `
+varying vec2 vTextureCoord;
+
+uniform sampler2D uSampler;
+uniform float uAlpha;
+
+uniform sampler2D maskMap;
+uniform int maskIds[256];
+
+
+uniform sampler2D depthMap;
+
+uniform vec2 brushSize;
+uniform vec2 brushPos;
+uniform vec2 canvasSize;
+
+#define MAXDISTANCE 10.0
+
+float getMaskColor(vec2 coord)
+{
+  return (texture2D(maskMap, (coord * brushSize + brushPos) / canvasSize) * uAlpha)[1];
+}
+
+vec4 getBrushColor(vec2 coord)
+{
+  return (texture2D(uSampler, coord));
+}
+
+vec4 getDepthColor(vec2 coord)
+{
+  return (texture2D(depthMap, (coord * brushSize + brushPos) / canvasSize));
+}
+
+
+bool checkDraw(vec2 coord) {
+  float f = getMaskColor(coord);
+  highp int index = int(f * 256.0);
+  for (int i = 0; i < 256; i++) {
+    if (index == i) return maskIds[i] == 1;
+  }
+  return false;
+}
+
+bool checkSelection(vec2 coord) {
+  float f = getMaskColor(coord);
+  highp int index = int(f * 256.0);
+  for (int i = 0; i < 256; i++) {
+    if (index == i) return maskIds[i] == 1;
+  }
+  return false;
+}
+
+void main(void)
+{
+  float pixelW = 1.0 / brushSize[0];
+  float pixelH = 1.0 / brushSize[1];
+
+  float count = 0.0;
+  gl_FragColor =  vec4(0, 0, 0, 0);
+
+  if (getBrushColor(vTextureCoord)[3] == 1.0 && checkSelection(vTextureCoord)) {
+    for (float i = -MAXDISTANCE; i <= MAXDISTANCE; ++i) {
+      for (float j = -MAXDISTANCE; j <= MAXDISTANCE; ++j) {
+        vec2 c = vec2(vTextureCoord[0] + i * pixelW,  vTextureCoord[1] + j * pixelH);
+        if (getBrushColor(c)[3] == 1.0 && checkSelection(c)) {
+          gl_FragColor += getDepthColor(c);
+          count++;
+        }
+      }
+    }
+  }
+
+  gl_FragColor /= count;
+}
+`;
+
   class BrushFilter extends PIXI.Filter {
     constructor(alpha = 1.0) {
       super(null, brushFrag, { uAlpha: 1, maskMap: PIXI.Texture.EMPTY, maskIds: new Array(256) });
@@ -1343,7 +1406,7 @@
       this.uniforms.uAlpha = value;
     }
     get maskMap() {
-      return this.uniforms.uAlpha;
+      return this.uniforms.maskMap;
     }
     set maskMap(value) {
       this.uniforms.maskMap = value;
