@@ -740,15 +740,7 @@
 
 
     function drawFlatLine(stroke, path, radius, depth, alpha, sign) {
-      const pixiLine = (new PIXI.Graphics()).lineStyle({
-        width: radius * 2. - 1.,
-        color: depth << 16 + 0 + 0,
-        alignment: 0.5,
-        join: 'round',
-        cap: 'round'
-      })
-        .moveTo(path[0].x - 0.5, path[0].y - 0.5);
-      pixiLine.name = 'flatLine a:' + alpha + ' r:' + radius;
+      const graphics = new PIXI.Graphics();
 
       const brushFilter = new BrushFilter();
       brushFilter.alpha = alpha;
@@ -758,19 +750,36 @@
       } else if (sign < 0) {
         brushFilter.blendMode = PIXI.BLEND_MODES.SUBTRACT;
       } else {
-        brushFilter.alpha = 1;
-      }
-      pixiLine.filters = [brushFilter];
-
-
-      for (let index = 0; index < path.length; ++index) {
-        let point = path[index];
-
-        pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+        brushFilter.alpha = 1; // roller mode
       }
 
-      stroke.lines.push(pixiLine);
-      stroke.lineContainer.addChild(pixiLine);
+      if (path.length == 1) {
+        // Single point only, cannot use path
+        const circle = graphics.lineStyle({
+          width: 0, alignment: 0.5
+        }).beginFill(depth << 16 + 0 + 0).drawCircle(path[0].x - 0.5, path[0].y - 0.5, radius).endFill();
+        circle.name = 'circle a:' + alpha + ' r:' + radius;
+      } else {
+        // Multi points line
+        const pixiLine = graphics.lineStyle({
+          width: radius * 2. - 1.,
+          color: depth << 16 + 0 + 0,
+          alignment: 0.5,
+          join: 'round',
+          cap: 'round'
+        }).moveTo(path[0].x - 0.5, path[0].y - 0.5);
+        pixiLine.name = 'flatLine a:' + alpha + ' r:' + radius;
+
+        for (let index = 0; index < path.length; ++index) {
+          let point = path[index];
+          pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+        }
+      }
+
+      graphics.filters = [brushFilter];
+
+      stroke.lines.push(graphics);
+      stroke.lineContainer.addChild(graphics);
 
       let bounds = stroke.lineContainer.getBounds();
       brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(bounds.width))), 1: Math.pow(2, Math.ceil(Math.log2(bounds.height))) };
