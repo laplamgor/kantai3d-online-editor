@@ -114,7 +114,7 @@
       dmCtx.globalAlpha = 1;
       dmCtx.drawImage(dmImage, 0, 0);
 
-      dmTexture = PIXI.Texture.from(dmCanvas);
+      dmTexture = PIXI.RenderTexture.from(dmCanvas);
       dmSprite.texture = dmTexture;
       maskSprite.texture = dmTexture;
       window.displacementFilter.uniforms.displacementMap = dmRenderTexture;
@@ -123,6 +123,8 @@
       window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
+      
+      updateCache2();
 
       resize();
       redraw();
@@ -232,10 +234,16 @@
     dmContainer.addChild(dmSprite);
 
 
+
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
     maskContainer.addChild(maskSprite);
 
+    
+    let depthCacheContainer = new PIXI.Container();
+    depthCacheContainer.name = 'depthCacheContainer';
+
+    app.stage.addChild(depthCacheContainer);
     app.stage.addChild(bmContainer);
 
     app.stage.addChild(maskContainer);
@@ -243,6 +251,8 @@
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
     app.stage.addChild(dmContainer);
+
+
 
 
     let tiltX;
@@ -512,6 +522,8 @@
     function endDrawing() {
       isDrawing = false;
       updateCache();
+      updateCache2();
+      console.log('endDrawing' + strokes.length);
       if (isMaskEditing) {
         refreshMaskListPanel();
       }
@@ -533,6 +545,35 @@
       cacheCtx.drawImage(dmCanvas, 0, 0);
       cacheBaseMapHistoryIndex = strokes.length - 1;
     }
+
+    
+    let cache = [];
+
+    function updateCache2() {
+      let stepNum = strokes.length;
+
+      let currentDepthRenderTexture = PIXI.RenderTexture.create(600, 800);
+      var stepCacheSprite = new PIXI.Sprite(currentDepthRenderTexture);
+      stepCacheSprite.name = 'stepCacheSprite-' + stepNum;
+
+      depthCacheContainer.addChild(stepCacheSprite);
+
+      app.renderer.render(dmContainer, currentDepthRenderTexture);
+
+      cache.push({step: stepNum, dm: stepCacheSprite});
+      let j = 0; // j is the position of the previous cached object. must older than current position
+      for (let k = 1; k < cache.length; k++) {
+      let c = cache[k];
+        if (3 * c.step - 2 * j  <=  stepNum) {
+          cache = cache.filter(e => e !== c); // delete this cache
+          c.dm.destroy();
+          break; // for each new step, it will at most delete one old cache
+        } else {
+          j = c.step;
+        }
+      }    
+    }
+
 
     function handleMouseMove() {
       let currentPoint = { x: Math.round(curOnTexX), y: Math.round(curOnTexY) };
@@ -723,9 +764,9 @@
       for (let i = 0; i < 256; i++) {
         brushFilter.maskIds[i] = stroke.mask[i];
       }
-      console.log(brushFilter.brushSize);
-      console.log(brushFilter.brushPos);
-      console.log(brushFilter.canvasSize);
+      // console.log(brushFilter.brushSize);
+      // console.log(brushFilter.brushPos);
+      // console.log(brushFilter.canvasSize);
     }
 
 
@@ -1701,3 +1742,70 @@ void main(void)
 }`;
 }
 init();
+
+
+/*
+
+A Custom Algorithm to preserve sub-optimal history snapshots effciently
+
+Issue:
+Without any cache snapshot, undoing in the canvas requires redrawing everything starting from the first step.
+Adding cached snapshots (aka keyframes) will reduce the need of redrawing everything from beginning.
+However, it is not ideal to snapshot after every new drawing step due to storage/memory space issue.
+
+Goal:
+Is to maintain only O(log(n)) amount of snapshots across n steps of history.
+DO NOT rebuild all snapshots for every new step added. At most delete one old snapshots.
+
+
+A step is considered a good snapshot position if:
+a) its distance to previous snapshot is BIG (i.e. if no snapshot here, high cost to rebuild the stage if user want to undo to this step); and
+b) its distance to final step is SMALL (i.e. more recent = user more likely to undo to this step)
+
+Weight A and B the fairly the same
+
+Condition to keep a snapshot:
+
+                        {a} / {b}     > C    // Where C is a configurable constant
+>> (distance to previous 1) / (n - i) > 0.5  // Set C to be 0.5
+>>                       3 i - 2 j    >  n   // Where j is the index of previous snapshot, j < i
+
+
+Code:
+
+
+let cache = [];
+
+for (let n = 1; n <= 50; n++) { // Add 50 steps one by one
+  cache.push(n);                
+  let j = 0; // j is the position of the previous cached object. must older than current position
+  for (let k = 0; k < cache.length; k++) {
+  let i = cache[k];
+    if (3 * i - 2 * j  <=  n) {
+      cache = cache.filter(e => e !== i); // delete this cache
+      break; // for each new step, it will at most delete one old cache
+    } else {
+      j = i;
+    }
+  }
+  console.log(cache);
+}
+
+
+result:
+[1]
+[1,2]
+[2,3]
+[2,3,4]
+[2,4,5]
+[4,5,6]
+[4,6,7]
+[4,6,7,8]
+[4,6,8,9]
+[4,8,9,10]
+[4,8,10,11]
+[8,10,11,12]
+
+
+
+*/
