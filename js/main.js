@@ -90,14 +90,22 @@
     let dmCtx;
     let dmPath = './f2152_depth.png';
     let dmImage = new Image();
-    let dmTexture = PIXI.Texture.EMPTY;
+    let dm1Texture = PIXI.Texture.EMPTY;
+    let dm2Texture = PIXI.Texture.EMPTY;
 
-    let dmSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
-    dmSprite.name = 'dmSprite';
-    dmSprite.width = 600;
-    dmSprite.height = 800;
-    dmSprite.transform.scale.x = 1;
-    dmSprite.transform.scale.x = 1;
+    let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    dm1Sprite.name = 'dm1Sprite';
+    dm1Sprite.width = 600;
+    dm1Sprite.height = 800;
+    dm1Sprite.transform.scale.x = 1;
+    dm1Sprite.transform.scale.x = 1;
+
+    let dm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    dm2Sprite.name = 'dm2Sprite';
+    dm2Sprite.width = 600;
+    dm2Sprite.height = 800;
+    dm2Sprite.transform.scale.x = 1;
+    dm2Sprite.transform.scale.x = 1;
 
     let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     maskSprite.name = 'maskSprite';
@@ -114,17 +122,23 @@
       dmCtx.globalAlpha = 1;
       dmCtx.drawImage(dmImage, 0, 0);
 
-      dmTexture = PIXI.RenderTexture.from(dmCanvas);
-      dmSprite.texture = dmTexture;
-      maskSprite.texture = dmTexture;
+      dm1Texture = PIXI.RenderTexture.from(dmCanvas);
+      dm2Texture = PIXI.RenderTexture.create(600, 800);
+
+      
+      dm1Sprite.texture = dm1Texture; // original opened depth map
+
+      dm2Sprite.texture = dm2Texture;
+      maskSprite.texture = dm2Texture;
       window.displacementFilter.uniforms.displacementMap = dmRenderTexture;
-      window.offsetFilter.uniforms.displacementMap = dmTexture;
+      window.offsetFilter.uniforms.displacementMap = dm2Texture;
 
       window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
       
       updateCache2();
+
 
       resize();
       redraw();
@@ -229,9 +243,14 @@
     var dmRTsprite = new PIXI.Sprite(dmRenderTexture);
     dmRTsprite.name = 'dmRTsprite';
 
-    let dmContainer = new PIXI.Container();
-    dmContainer.name = 'dmContainer';
-    dmContainer.addChild(dmSprite);
+    let dm1Container = new PIXI.Container();
+    dm1Container.name = 'dm1Container';
+    dm1Container.addChild(dm1Sprite);
+
+
+    let dm2Container = new PIXI.Container();
+    dm2Container.name = 'dm2Container';
+    dm2Container.addChild(dm2Sprite);
 
 
 
@@ -242,7 +261,7 @@
     
     let depthCacheContainer = new PIXI.Container();
     depthCacheContainer.name = 'depthCacheContainer';
-
+    
     app.stage.addChild(depthCacheContainer);
     app.stage.addChild(bmContainer);
 
@@ -250,7 +269,7 @@
 
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
-    app.stage.addChild(dmContainer);
+    app.stage.addChild(dm2Container);
 
 
 
@@ -441,7 +460,7 @@
         updateCursorImage();
       }
       app.renderer.render(bmContainer, bmRenderTexture);
-      app.renderer.render(dmContainer, dmRenderTexture);
+      app.renderer.render(dm2Container, dmRenderTexture);
 
       window.requestAnimationFrame(step);
     }
@@ -521,7 +540,7 @@
 
     function endDrawing() {
       isDrawing = false;
-      updateCache();
+      // updateCache();
       updateCache2();
       console.log('endDrawing' + strokes.length);
       if (isMaskEditing) {
@@ -530,21 +549,6 @@
     }
 
     let strokes = [];
-
-    let cacheBaseMap; // The image of a stage, reducing the need to drawing old history brush repeatedly
-    let cacheCtx;
-    let cacheBaseMapHistoryIndex = -1; // The history index of the cache
-
-    // Call me when a new history change is confirmed (i.e. mouse up)
-    function updateCache() {
-      if (!cacheBaseMap || cacheBaseMap.width != dmCanvas.width || cacheBaseMap.height != dmCanvas.height) {
-        cacheBaseMap = new OffscreenCanvas(dmCanvas.width, dmCanvas.height);
-        cacheCtx = cacheBaseMap.getContext('2d');
-      }
-      cacheCtx.clearRect(0, 0, dmCanvas.width, dmCanvas.height);
-      cacheCtx.drawImage(dmCanvas, 0, 0);
-      cacheBaseMapHistoryIndex = strokes.length - 1;
-    }
 
     
     let cache = [];
@@ -555,10 +559,13 @@
       let currentDepthRenderTexture = PIXI.RenderTexture.create(600, 800);
       var stepCacheSprite = new PIXI.Sprite(currentDepthRenderTexture);
       stepCacheSprite.name = 'stepCacheSprite-' + stepNum;
-
       depthCacheContainer.addChild(stepCacheSprite);
 
-      app.renderer.render(dmContainer, currentDepthRenderTexture);
+      if (strokes.length == 0) {
+        app.renderer.render(dm1Sprite, currentDepthRenderTexture);
+      } else {
+        app.renderer.render(dm2Container, currentDepthRenderTexture);
+      }
 
       cache.push({step: stepNum, dm: stepCacheSprite});
       let j = 0; // j is the position of the previous cached object. must older than current position
@@ -566,13 +573,23 @@
       let c = cache[k];
         if (3 * c.step - 2 * j  <=  stepNum) {
           cache = cache.filter(e => e !== c); // delete this cache
-          c.dm.destroy();
+          c.dm.destroy(true);
           break; // for each new step, it will at most delete one old cache
         } else {
           j = c.step;
         }
-      }    
+      }
+      
+      app.renderer.render(stepCacheSprite, dm2Texture);
+      
+      // remove all children
+      while (dm2Container.children[0]) {
+        dm2Container.removeChild(dm2Container.children[0]);
+      }
+      dm2Container.addChild(dm2Sprite);
     }
+
+    
 
 
     function handleMouseMove() {
@@ -590,25 +607,23 @@
     }
 
     function redraw() {
-      let cacheValid = cacheBaseMap != null && cacheBaseMapHistoryIndex < strokes.length;
-
-      // Draw the base image
-      dmCtx.globalAlpha = 1;
-      dmCtx.globalCompositeOperation = 'source-over';
-      if (cacheValid) {
-        dmCtx.drawImage(cacheBaseMap, 0, 0);
-      } else {
-        // Start over from the first history
-        dmCtx.drawImage(dmImage, 0, 0);
+      // Get the closest cached steps
+      let cached;
+      for (let k = 0; k < cache.length; k++) {
+        if (cache[k].step <= strokes.length) {
+          cached = cache[k];
+        }
       }
+      app.renderer.render(cached.dm, dm2Texture);
 
       if (strokes.length > 0) {
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
       }
 
-      // Draw all steps
+
+      // Draw all uncached steps
       let maskUpdated = false;
-      for (let i = cacheValid ? cacheBaseMapHistoryIndex + 1 : 0; i < strokes.length; i++) {
+      for (let i = cached.step; i < strokes.length; i++) {
         if (strokes[i].isMaskEditing) {
           drawMaskLine(strokes[i].path, strokes[i].r1, strokes[i].value);
           maskUpdated = true;
@@ -632,7 +647,7 @@
         updateMaskIndicator();
       }
 
-      dmTexture.update();
+      dm2Texture.update();
     }
 
 
@@ -644,25 +659,22 @@
           drawSmoothLine(stroke, path, innerRadius, outerRadius, -value, isAbsolute, -1, isBlur)
           return;
         } else {
-          dmCtx.globalAlpha = value * 1. / 256;
           depth = value;
-          dmCtx.globalCompositeOperation = 'lighter';
         }
       } else {
-        dmCtx.globalAlpha = 1;
         depth = value;
-        dmCtx.globalCompositeOperation = 'source-over';
         sign = 0;
       }
 
 
       if (stroke.lines) {
         for (let index = 0; index < stroke.lines.length; ++index) {
-          stroke.lines[index].destroy();
+          stroke.lines[index].destroy(true);
         }
-        stroke.lineContainer.destroy();
+        stroke.lineContainer.destroy(true);
       }
       stroke.lineContainer = new PIXI.Container();
+      stroke.lineContainer.name = 'line';
       stroke.lines = [];
 
 
@@ -685,7 +697,7 @@
         drawFlatLine(stroke, path, innerRadius, depth, alphaNeeded, sign, isBlur);
       }
 
-      dmContainer.addChild(stroke.lineContainer);
+      dm2Container.addChild(stroke.lineContainer);
     }
 
     function getCurrentMaskSelected() {
@@ -709,7 +721,7 @@
       if (isBlur) {
         brushFilter = new BlurFilter();
         brushFilter.maskMap = maskSprite.texture;
-        brushFilter.depthMap = dmTexture;
+        brushFilter.depthMap = dm2Texture;
 
         brushFilter.alpha = 1; // roller mode
         graphics.filters = [brushFilter];
