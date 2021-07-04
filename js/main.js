@@ -631,7 +631,6 @@
         dm2Container.removeChild(dm2Container.children[0]);
       }
       dm2Container.addChild(dm2Sprite);
-      
       while (mm2Container.children[0]) {
         mm2Container.removeChild(mm2Container.children[0]);
       }
@@ -670,6 +669,15 @@
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
       }
 
+      
+      // remove all children
+      while (dm2Container.children[0]) {
+        dm2Container.removeChild(dm2Container.children[0]);
+      }
+      dm2Container.addChild(dm2Sprite);
+      while (mm2Container.children[0]) {
+        mm2Container.removeChild(mm2Container.children[0]);
+      }
 
       // Draw all uncached steps
       let maskUpdated = false;
@@ -697,9 +705,6 @@
       if (maskUpdated) {
         updateMaskIndicator();
       }
-
-      dm2Texture.update();
-      mm2Texture.update();
     }
 
 
