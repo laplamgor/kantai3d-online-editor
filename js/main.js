@@ -303,8 +303,8 @@
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
     app.stage.addChild(mm1Container);
-    app.stage.addChild(dm2Container);
     app.stage.addChild(mm2Container);
+    app.stage.addChild(dm2Container);
 
 
 
@@ -825,16 +825,18 @@
       stroke.lineContainer.addChild(graphics);
 
       let bounds = stroke.lineContainer.getBounds();
-      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(bounds.width))), 1: Math.pow(2, Math.ceil(Math.log2(bounds.height))) };
-      brushFilter.brushPos = { 0: bounds.x, 1: bounds.y };
+      graphics.filterArea = bounds.clone();
+      graphics.filterArea.x = Math.max(graphics.filterArea.x, 0.0);
+      graphics.filterArea.y = Math.max(graphics.filterArea.y, 0.0);
+      graphics.filterArea.width = Math.min(graphics.filterArea.width + bounds.x - graphics.filterArea.x, bmImage.width - graphics.filterArea.x);
+      graphics.filterArea.height = Math.min(graphics.filterArea.height + bounds.y - graphics.filterArea.y, bmImage.height - graphics.filterArea.y);
+      brushFilter.brushPos = { 0: graphics.filterArea.x, 1: graphics.filterArea.y };
+      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.width))), 1: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.height))) };
       brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
       brushFilter.maskIds = Array(256).fill(0);
       for (let i = 0; i < 256; i++) {
         brushFilter.maskIds[i] = stroke.mask[i];
       }
-      // console.log(brushFilter.brushSize);
-      // console.log(brushFilter.brushPos);
-      // console.log(brushFilter.canvasSize);
     }
 
 
@@ -1237,18 +1239,18 @@
       stroke.lineContainer.addChild(graphics);
 
       let bounds = stroke.lineContainer.getBounds();
-      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(bounds.width))), 1: Math.pow(2, Math.ceil(Math.log2(bounds.height))) };
-      brushFilter.brushPos = { 0: bounds.x, 1: bounds.y };
+      graphics.filterArea = bounds.clone();
+      graphics.filterArea.x = Math.max(graphics.filterArea.x, 0.0);
+      graphics.filterArea.y = Math.max(graphics.filterArea.y, 0.0);
+      graphics.filterArea.width = Math.min(graphics.filterArea.width + bounds.x - graphics.filterArea.x, bmImage.width - graphics.filterArea.x);
+      graphics.filterArea.height = Math.min(graphics.filterArea.height + bounds.y - graphics.filterArea.y, bmImage.height - graphics.filterArea.y);
+      brushFilter.brushPos = { 0: graphics.filterArea.x, 1: graphics.filterArea.y };
+      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.width))), 1: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.height))) };
       brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
       brushFilter.maskIds = Array(256).fill(0);
       for (let i = 0; i < 256; i++) {
         brushFilter.maskIds[i] = stroke.mask[i];
       }
-      // console.log(brushFilter.brushSize);
-      // console.log(brushFilter.brushPos);
-      // console.log(brushFilter.canvasSize);
-
-
 
       mm2Container.addChild(stroke.lineContainer);
     }
