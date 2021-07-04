@@ -302,8 +302,8 @@
 
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
-    app.stage.addChild(dm2Container);
     app.stage.addChild(mm1Container);
+    app.stage.addChild(dm2Container);
     app.stage.addChild(mm2Container);
 
 
@@ -678,12 +678,13 @@
       while (mm2Container.children[0]) {
         mm2Container.removeChild(mm2Container.children[0]);
       }
+      mm2Container.addChild(mm2Sprite);
+
 
       // Draw all uncached steps
       let maskUpdated = false;
       for (let i = cached.step; i < strokes.length; i++) {
         if (strokes[i].isMaskEditing) {
-          drawMaskLine(strokes[i].path, strokes[i].r1, strokes[i].value);
           drawMaskLine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value)
           maskUpdated = true;
         } else {
@@ -783,7 +784,7 @@
 
       } else {
         brushFilter = new BrushFilter();
-        brushFilter.maskMap = mm2Sprite.texture;
+        brushFilter.maskMap = mm2Texture;
         if (sign > 0) {
           brushFilter.alpha = alpha;
           brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
@@ -1233,45 +1234,6 @@
       
       mm2Container.addChild(stroke.lineContainer);
     }
-
-    function drawMaskLine(path, radius, value) {
-      let depth;
-
-      dmCtx.globalAlpha = 1;
-      depth = value;
-      dmCtx.globalCompositeOperation = 'source-over';
-
-      let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
-      let tmCtx = tempCanvas.getContext('2d');
-
-      // Draw stroke on a temp canvas
-      tmCtx.beginPath();
-      tmCtx.lineWidth = radius * 2. - 1.;
-      tmCtx.lineCap = "round";
-      tmCtx.lineJoin = "round";
-      tmCtx.strokeStyle = "rgba(" + 0 + "," + value + "," + 0 + "," + 255 + ")";
-      tmCtx.moveTo(path[0].x - 0.5, path[0].y - 0.5);
-      for (let index = 0; index < path.length; ++index) {
-        let point = path[index];
-        tmCtx.lineTo(point.x - 0.5, point.y - 0.5);
-      }
-      tmCtx.stroke();
-
-
-      // Copy the solid pixel onto the dmCanvas
-      let dmData = dmCtx.getImageData(0, 0, dmCanvas.width, dmCanvas.height);
-      let dmdd = dmData.data;
-      let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
-      let tmdd = tmImageData.data;
-      for (let j = 1; j < dmdd.length; j += 4) {
-        if (tmdd[j + 2] > 0) { // a
-          dmdd[j] = value;
-        }
-      }
-      dmCtx.putImageData(dmData, 0, 0);
-    }
-
-
 
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
