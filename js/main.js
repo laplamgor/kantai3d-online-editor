@@ -91,7 +91,7 @@
     let dmImage = new Image();
     let dm1Texture = PIXI.Texture.EMPTY;
     let dm2Texture = PIXI.Texture.EMPTY;
-    
+
     let mm1Texture = PIXI.Texture.EMPTY;
     let mm2Texture = PIXI.Texture.EMPTY;
 
@@ -142,7 +142,7 @@
       dm1Texture = PIXI.RenderTexture.from(dmCanvas);
       dm2Texture = PIXI.RenderTexture.create(600, 800);
 
-      
+
       dm1Sprite.texture = dm1Texture; // original opened depth map
 
       dm2Sprite.texture = dm2Texture;
@@ -158,7 +158,7 @@
       window.displacementFilter.uniforms.baseMap = bmRenderTexture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
-      
+
       updateCache2();
 
 
@@ -287,10 +287,10 @@
     maskContainer.name = 'maskContainer';
     maskContainer.addChild(maskSprite);
 
-    
+
     let depthCacheContainer = new PIXI.Container();
     depthCacheContainer.name = 'depthCacheContainer';
-    
+
     let maskCacheContainer = new PIXI.Container();
     maskCacheContainer.name = 'maskCacheContainer';
 
@@ -585,7 +585,7 @@
 
     let strokes = [];
 
-    
+
     let cacheSnapshots = [];
 
     function updateCache2() {
@@ -609,11 +609,11 @@
         app.renderer.render(mm2Container, currentMaskRenderTexture);
       }
 
-      cacheSnapshots.push({step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite});
+      cacheSnapshots.push({ step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite });
       let j = 0; // j is the position of the previous cached object. must older than current position
       for (let k = 1; k < cacheSnapshots.length; k++) {
-      let c = cacheSnapshots[k];
-        if (3 * c.step - 2 * j  <=  stepNum) {
+        let c = cacheSnapshots[k];
+        if (3 * c.step - 2 * j <= stepNum) {
           cacheSnapshots = cacheSnapshots.filter(e => e !== c); // delete this cache
           c.dm.destroy(true);
           c.mm.destroy(true);
@@ -622,10 +622,10 @@
           j = c.step;
         }
       }
-      
+
       app.renderer.render(depthCacheSprite, dm2Texture);
       app.renderer.render(maskCacheSprite, mm2Texture);
-      
+
       // remove all children
       while (dm2Container.children[0]) {
         dm2Container.removeChild(dm2Container.children[0]);
@@ -637,7 +637,7 @@
       mm2Container.addChild(mm2Sprite);
     }
 
-    
+
 
 
     function handleMouseMove() {
@@ -669,7 +669,7 @@
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
       }
 
-      
+
       // remove all children
       while (dm2Container.children[0]) {
         dm2Container.removeChild(dm2Container.children[0]);
@@ -1107,13 +1107,17 @@
     let maskEditingId = 0;
 
     let isMaskIndicatorOn = true;
-    function updateMaskIndicator() {
 
+    function updateMaskIndicator() {
       // Redraw the basemap
       bm2Ctx = bm2Canvas.getContext('2d');
       bm2Ctx.clearRect(0, 0, bmImage.width, bmImage.height);
       bm2Ctx.drawImage(bmImage, 0, 0);
       if (isMaskEditing) {
+
+        let mask = getCurrentMaskSelected();
+
+
         let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
         let tmCtx = tempCanvas.getContext('2d');
         let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
@@ -1126,12 +1130,20 @@
         let dmdd = dmImageData.data;
 
         for (var i = 0; i < dmdd.length; i += 4) {
-          let maskId = dmdd[i + 1];
-          let color = maskColor[maskId];
-          tmdd[i + 0] = color.r; // r
-          tmdd[i + 1] = color.g; // g
-          tmdd[i + 2] = color.b; // b
-          tmdd[i + 3] = maskId == maskEditingId ? 0 : 192; // a
+          if (mask[dmdd[i + 1]] == 1) {
+            let maskId = dmdd[i + 1];
+            let color = maskColor[maskId];
+            tmdd[i + 0] = color.r; // r
+            tmdd[i + 1] = color.g; // g
+            tmdd[i + 2] = color.b; // b
+            tmdd[i + 3] = maskId == maskEditingId ? 0 : 192; // a
+          } else {
+            // Red
+            tmdd[i] = 255;
+            tmdd[i + 1] = 0;
+            tmdd[i + 2] = 0;
+            tmdd[i + 3] = 128;
+          }
         }
         tmCtx.putImageData(tmImageData, 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
@@ -1150,14 +1162,15 @@
         let tmdd = tmImageData.data;
 
         tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-        for (let j = 0; j < dmdd.length; j += 4) {
-          // Red
-          tmdd[j] = 255;
-          tmdd[j + 1] = 0;
-          tmdd[j + 2] = 0;
-
-          // half transparent on the masked area. invisible on the editable area
-          tmdd[j + 3] = mask[dmdd[j + 1]] == 1 ? 0 : 128;
+        for (let i = 0; i < dmdd.length; i += 4) {
+          // half transparent red on the masked area. invisible on the editable area
+          if (mask[dmdd[i + 1]] != 1) {
+            // Red
+            tmdd[i] = 255;
+            tmdd[i + 1] = 0;
+            tmdd[i + 2] = 0;
+            tmdd[i + 3] = 128;
+          }
         }
         tmCtx.putImageData(new ImageData(tmdd, 600, 800), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
@@ -1174,7 +1187,7 @@
 
 
 
-    
+
     function drawMaskLine2(stroke, path, radius, depth, maskid) {
       if (stroke.lines) {
         for (let index = 0; index < stroke.lines.length; ++index) {
@@ -1195,7 +1208,7 @@
       brushFilter.maskMap = mm2Sprite.texture;
       brushFilter.alpha = 1; // roller mode
       graphics.filters = [brushFilter];
-        
+
       if (path.length == 1) {
         // Single point only, cannot use path
         const circle = graphics.lineStyle({
@@ -1236,7 +1249,7 @@
       // console.log(brushFilter.canvasSize);
 
 
-      
+
       mm2Container.addChild(stroke.lineContainer);
     }
 
@@ -1885,7 +1898,7 @@ Code:
 let cache = [];
 
 for (let n = 1; n <= 50; n++) { // Add 50 steps one by one
-  cache.push(n);                
+  cache.push(n);
   let j = 0; // j is the position of the previous cached object. must older than current position
   for (let k = 0; k < cache.length; k++) {
   let i = cache[k];
