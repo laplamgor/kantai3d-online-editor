@@ -1057,7 +1057,8 @@
         return;
       }
 
-      let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+      let dmTempCanvas = app.renderer.extract.canvas(mm2Container);
+      let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
       let dmdd = dmImageData.data;
 
       let set1 = new Map();
@@ -1115,11 +1116,13 @@
       if (isMaskEditing) {
         let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
         let tmCtx = tempCanvas.getContext('2d');
-        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
         let tmdd = tmImageData.data;
 
 
-        let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmTempCanvas = app.renderer.extract.canvas(mm2Container);
+        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
         let dmdd = dmImageData.data;
 
         for (var i = 0; i < dmdd.length; i += 4) {
@@ -1136,12 +1139,14 @@
 
         let mask = getCurrentMaskSelected();
 
-        let dmImageData = dmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmTempCanvas = app.renderer.extract.canvas(mm2Container);
+        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
         let dmdd = dmImageData.data;
 
         let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
         let tmCtx = tempCanvas.getContext('2d');
-        let tmImageData = tmCtx.getImageData(0, 0, bmImage.width, bmImage.height);
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
         let tmdd = tmImageData.data;
 
         tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
@@ -1154,7 +1159,7 @@
           // half transparent on the masked area. invisible on the editable area
           tmdd[j + 3] = mask[dmdd[j + 1]] == 1 ? 0 : 128;
         }
-        tmCtx.putImageData(tmImageData, 0, 0);
+        tmCtx.putImageData(new ImageData(tmdd, 600, 800), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
       }
 
