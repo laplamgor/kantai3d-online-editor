@@ -21,7 +21,7 @@
 
     let bm2Canvas, bm2Ctx;                                      // The canvas containing the base map image + mask indicators
 
-    let bm3Canvas, bm3Ctx, bm3ImageData;                        // The canvas containing the base map image + mask indicators + cursor
+    let bm3Canvas, bm3Ctx;                                      // The canvas containing the base map image + mask indicators + cursor
 
 
     let bm3Texture;
@@ -56,7 +56,6 @@
       bm3Canvas = new OffscreenCanvas(bmImage.width, bmImage.height);
       bm3Ctx = bm3Canvas.getContext('2d');
       bm3Ctx.drawImage(bmImage, 0, 0);
-      bm3ImageData = bm3Ctx.getImageData(0, 0, bmImage.width, bmImage.height);
 
 
       if (!bm3Texture) {
@@ -92,6 +91,9 @@
     let dmImage = new Image();
     let dm1Texture = PIXI.Texture.EMPTY;
     let dm2Texture = PIXI.Texture.EMPTY;
+    
+    let mm1Texture = PIXI.Texture.EMPTY;
+    let mm2Texture = PIXI.Texture.EMPTY;
 
     let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm1Sprite.name = 'dm1Sprite';
@@ -106,6 +108,21 @@
     dm2Sprite.height = 800;
     dm2Sprite.transform.scale.x = 1;
     dm2Sprite.transform.scale.x = 1;
+
+    let mm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    mm1Sprite.name = 'mm1Sprite';
+    mm1Sprite.width = 600;
+    mm1Sprite.height = 800;
+    mm1Sprite.transform.scale.x = 1;
+    mm1Sprite.transform.scale.x = 1;
+
+    let mm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    mm2Sprite.name = 'mm2Sprite';
+    mm2Sprite.width = 600;
+    mm2Sprite.height = 800;
+    mm2Sprite.transform.scale.x = 1;
+    mm2Sprite.transform.scale.x = 1;
+
 
     let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     maskSprite.name = 'maskSprite';
@@ -130,6 +147,11 @@
 
       dm2Sprite.texture = dm2Texture;
       maskSprite.texture = dm2Texture;
+
+      mm2Texture = PIXI.RenderTexture.create(600, 800);
+      mm1Sprite.texture = dm1Texture;
+      mm2Sprite.texture = mm2Texture;
+
       window.displacementFilter.uniforms.displacementMap = dmRenderTexture;
       window.offsetFilter.uniforms.displacementMap = dm2Texture;
 
@@ -252,7 +274,14 @@
     dm2Container.name = 'dm2Container';
     dm2Container.addChild(dm2Sprite);
 
+    let mm1Container = new PIXI.Container();
+    mm1Container.name = 'mm1Container';
+    mm1Container.addChild(mm1Sprite);
 
+
+    let mm2Container = new PIXI.Container();
+    mm2Container.name = 'mm2Container';
+    mm2Container.addChild(mm2Sprite);
 
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
@@ -262,7 +291,11 @@
     let depthCacheContainer = new PIXI.Container();
     depthCacheContainer.name = 'depthCacheContainer';
     
+    let maskCacheContainer = new PIXI.Container();
+    maskCacheContainer.name = 'maskCacheContainer';
+
     app.stage.addChild(depthCacheContainer);
+    app.stage.addChild(maskCacheContainer);
     app.stage.addChild(bmContainer);
 
     app.stage.addChild(maskContainer);
@@ -270,6 +303,8 @@
     app.stage.addChild(dmRTsprite);
     app.stage.addChild(bmRenderTextureSprite);
     app.stage.addChild(dm2Container);
+    app.stage.addChild(mm1Container);
+    app.stage.addChild(mm2Container);
 
 
 
@@ -551,42 +586,56 @@
     let strokes = [];
 
     
-    let cache = [];
+    let cacheSnapshots = [];
 
     function updateCache2() {
       let stepNum = strokes.length;
 
       let currentDepthRenderTexture = PIXI.RenderTexture.create(600, 800);
-      var stepCacheSprite = new PIXI.Sprite(currentDepthRenderTexture);
-      stepCacheSprite.name = 'stepCacheSprite-' + stepNum;
-      depthCacheContainer.addChild(stepCacheSprite);
+      var depthCacheSprite = new PIXI.Sprite(currentDepthRenderTexture);
+      depthCacheSprite.name = 'stepCacheSprite-' + stepNum;
+      depthCacheContainer.addChild(depthCacheSprite);
+
+      let currentMaskRenderTexture = PIXI.RenderTexture.create(600, 800);
+      var maskCacheSprite = new PIXI.Sprite(currentMaskRenderTexture);
+      maskCacheSprite.name = 'maskCacheSprite-' + stepNum;
+      maskCacheContainer.addChild(maskCacheSprite);
 
       if (strokes.length == 0) {
         app.renderer.render(dm1Sprite, currentDepthRenderTexture);
+        app.renderer.render(dm1Sprite, currentMaskRenderTexture);
       } else {
         app.renderer.render(dm2Container, currentDepthRenderTexture);
+        app.renderer.render(mm2Container, currentMaskRenderTexture);
       }
 
-      cache.push({step: stepNum, dm: stepCacheSprite});
+      cacheSnapshots.push({step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite});
       let j = 0; // j is the position of the previous cached object. must older than current position
-      for (let k = 1; k < cache.length; k++) {
-      let c = cache[k];
+      for (let k = 1; k < cacheSnapshots.length; k++) {
+      let c = cacheSnapshots[k];
         if (3 * c.step - 2 * j  <=  stepNum) {
-          cache = cache.filter(e => e !== c); // delete this cache
+          cacheSnapshots = cacheSnapshots.filter(e => e !== c); // delete this cache
           c.dm.destroy(true);
+          c.mm.destroy(true);
           break; // for each new step, it will at most delete one old cache
         } else {
           j = c.step;
         }
       }
       
-      app.renderer.render(stepCacheSprite, dm2Texture);
+      app.renderer.render(depthCacheSprite, dm2Texture);
+      app.renderer.render(maskCacheSprite, mm2Texture);
       
       // remove all children
       while (dm2Container.children[0]) {
         dm2Container.removeChild(dm2Container.children[0]);
       }
       dm2Container.addChild(dm2Sprite);
+      
+      while (mm2Container.children[0]) {
+        mm2Container.removeChild(mm2Container.children[0]);
+      }
+      mm2Container.addChild(mm2Sprite);
     }
 
     
@@ -609,12 +658,13 @@
     function redraw() {
       // Get the closest cached steps
       let cached;
-      for (let k = 0; k < cache.length; k++) {
-        if (cache[k].step <= strokes.length) {
-          cached = cache[k];
+      for (let k = 0; k < cacheSnapshots.length; k++) {
+        if (cacheSnapshots[k].step <= strokes.length) {
+          cached = cacheSnapshots[k];
         }
       }
       app.renderer.render(cached.dm, dm2Texture);
+      app.renderer.render(cached.mm, mm2Texture);
 
       if (strokes.length > 0) {
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
@@ -626,6 +676,7 @@
       for (let i = cached.step; i < strokes.length; i++) {
         if (strokes[i].isMaskEditing) {
           drawMaskLine(strokes[i].path, strokes[i].r1, strokes[i].value);
+          drawMaskLine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value)
           maskUpdated = true;
         } else {
           switch (strokes[i].brushId) {
@@ -648,6 +699,7 @@
       }
 
       dm2Texture.update();
+      mm2Texture.update();
     }
 
 
@@ -712,15 +764,13 @@
       return newMasks;
     }
 
-
-
     function drawFlatLine(stroke, path, radius, depth, alpha, sign, isBlur) {
       const graphics = new PIXI.Graphics();
 
       let brushFilter;
       if (isBlur) {
         brushFilter = new BlurFilter();
-        brushFilter.maskMap = maskSprite.texture;
+        brushFilter.maskMap = mm2Sprite.texture;
         brushFilter.depthMap = dm2Texture;
 
         brushFilter.alpha = 1; // roller mode
@@ -728,7 +778,7 @@
 
       } else {
         brushFilter = new BrushFilter();
-        brushFilter.maskMap = maskSprite.texture;
+        brushFilter.maskMap = mm2Sprite.texture;
         if (sign > 0) {
           brushFilter.alpha = alpha;
           brushFilter.blendMode = PIXI.BLEND_MODES.ADD;
@@ -1103,6 +1153,80 @@
       }
 
       bm3Texture.update();
+    }
+
+
+
+
+
+
+
+
+
+    
+    function drawMaskLine2(stroke, path, radius, depth, maskid) {
+      if (stroke.lines) {
+        for (let index = 0; index < stroke.lines.length; ++index) {
+          stroke.lines[index].destroy(true);
+        }
+        stroke.lineContainer.destroy(true);
+      }
+      stroke.lineContainer = new PIXI.Container();
+      stroke.lineContainer.name = 'line(mask)';
+      stroke.lines = [];
+
+
+
+      const graphics = new PIXI.Graphics();
+
+      let brushFilter;
+      brushFilter = new BrushFilter();
+      brushFilter.maskMap = mm2Sprite.texture;
+      brushFilter.alpha = 1; // roller mode
+      graphics.filters = [brushFilter];
+        
+      if (path.length == 1) {
+        // Single point only, cannot use path
+        const circle = graphics.lineStyle({
+          width: 0, alignment: 0.5
+        }).beginFill(depth << 8 + 0).drawCircle(path[0].x - 0.5, path[0].y - 0.5, radius - 0.5).endFill();
+        circle.name = 'circle a:' + 1 + ' r:' + radius;
+      } else {
+        // Multi points line
+        const pixiLine = graphics.lineStyle({
+          width: radius * 2. - 1.,
+          color: depth << 8 + 0 + 0,
+          alignment: 0.5,
+          join: 'round',
+          cap: 'round'
+        }).moveTo(path[0].x - 0.5, path[0].y - 0.5);
+        pixiLine.name = 'flatLine a:' + 1 + ' r:' + radius;
+
+        for (let index = 0; index < path.length; ++index) {
+          let point = path[index];
+          pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+        }
+      }
+
+
+      stroke.lines.push(graphics);
+      stroke.lineContainer.addChild(graphics);
+
+      let bounds = stroke.lineContainer.getBounds();
+      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(bounds.width))), 1: Math.pow(2, Math.ceil(Math.log2(bounds.height))) };
+      brushFilter.brushPos = { 0: bounds.x, 1: bounds.y };
+      brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
+      brushFilter.maskIds = Array(256).fill(0);
+      for (let i = 0; i < 256; i++) {
+        brushFilter.maskIds[i] = stroke.mask[i];
+      }
+      // console.log(brushFilter.brushSize);
+      // console.log(brushFilter.brushPos);
+      // console.log(brushFilter.canvasSize);
+
+
+      
+      mm2Container.addChild(stroke.lineContainer);
     }
 
     function drawMaskLine(path, radius, value) {
