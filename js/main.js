@@ -27,10 +27,6 @@
     let bm3Texture;
     let baseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     baseMapSprite.name = 'baseMapSprite';
-    baseMapSprite.width = 600;
-    baseMapSprite.height = 800;
-    baseMapSprite.transform.scale.x = 1;
-    baseMapSprite.transform.scale.x = 1;
 
     let reverseMapSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     reverseMapSprite.name = 'reverseMapSprite';
@@ -97,39 +93,19 @@
 
     let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm1Sprite.name = 'dm1Sprite';
-    dm1Sprite.width = 600;
-    dm1Sprite.height = 800;
-    dm1Sprite.transform.scale.x = 1;
-    dm1Sprite.transform.scale.x = 1;
 
     let dm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm2Sprite.name = 'dm2Sprite';
-    dm2Sprite.width = 600;
-    dm2Sprite.height = 800;
-    dm2Sprite.transform.scale.x = 1;
-    dm2Sprite.transform.scale.x = 1;
 
     let mm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     mm1Sprite.name = 'mm1Sprite';
-    mm1Sprite.width = 600;
-    mm1Sprite.height = 800;
-    mm1Sprite.transform.scale.x = 1;
-    mm1Sprite.transform.scale.x = 1;
 
     let mm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     mm2Sprite.name = 'mm2Sprite';
-    mm2Sprite.width = 600;
-    mm2Sprite.height = 800;
-    mm2Sprite.transform.scale.x = 1;
-    mm2Sprite.transform.scale.x = 1;
 
 
     let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     maskSprite.name = 'maskSprite';
-    maskSprite.width = 600;
-    maskSprite.height = 800;
-    maskSprite.transform.scale.x = 1;
-    maskSprite.transform.scale.x = 1;
 
     dmImage.onload = function () {
       dmCanvas.width = dmImage.width;
@@ -140,7 +116,7 @@
       dmCtx.drawImage(dmImage, 0, 0);
 
       dm1Texture = PIXI.RenderTexture.from(dmCanvas);
-      dm2Texture = PIXI.RenderTexture.create(600, 800);
+      dm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
 
 
       dm1Sprite.texture = dm1Texture; // original opened depth map
@@ -148,7 +124,7 @@
       dm2Sprite.texture = dm2Texture;
       maskSprite.texture = dm2Texture;
 
-      mm2Texture = PIXI.RenderTexture.create(600, 800);
+      mm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       mm1Sprite.texture = dm1Texture;
       mm2Sprite.texture = mm2Texture;
 
@@ -715,7 +691,7 @@
               break;
             case 2:
               drawSmoothLine(strokes[i], strokes[i].path, strokes[i].r1, 0, strokes[i].value, false, 1, true);
-              break; f
+              break;
           }
         }
       }
@@ -1191,7 +1167,7 @@
             tmdd[i + 3] = 128;
           }
         }
-        tmCtx.putImageData(new ImageData(tmdd, 600, 800), 0, 0);
+        tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
       }
 
