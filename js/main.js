@@ -545,6 +545,22 @@
       }
       strokes[strokes.length - 1].brushId = brushId;
 
+
+      // Remove everything in the redo stack
+      redoList = [];
+      document.getElementById('undo-button').disabled = false;
+      document.getElementById('redo-button').disabled = redoList.length == 0;
+
+      // Remove invalid cache thats only for those redo steps
+      let invalidCacheSnapshots = cacheSnapshots.filter(e => e.step > strokes.length - 1); // delete this cache
+      for (let k = 0; k < invalidCacheSnapshots.length; k++) {
+        invalidCacheSnapshots[k].dm.destroy(true);
+        invalidCacheSnapshots[k].mm.destroy(true);
+      }
+      cacheSnapshots = cacheSnapshots.filter(e => e.step <= strokes.length - 1);
+
+
+
       if (isMaskEditing) {
         strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
         strokes[strokes.length - 1].value = maskEditingId;
