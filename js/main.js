@@ -346,6 +346,7 @@
         isTilting = false;
         window.displacementFilter.uniforms.offset[0] = 0;
         window.displacementFilter.uniforms.offset[1] = 0;
+        needUpdateReverseMapBuffer = true;
         return;
       }
 
