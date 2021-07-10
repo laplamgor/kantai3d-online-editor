@@ -54,17 +54,13 @@
       bm3Ctx.drawImage(bmImage, 0, 0);
 
 
-      if (!bm3Texture) {
-        bm3Texture = PIXI.Texture.from(bm3Canvas);
-      } else {
-        bm3Texture.update();
-      }
+      bm3Texture = PIXI.Texture.from(bm3Canvas);
       baseMapSprite.texture = bm3Texture;
       reverseMapSprite.texture = bm3Texture;
       needUpdateReverseMapBuffer = true;
 
 
-      window.displacementFilter.uniforms.baseMap = bmRenderTexture;
+      window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
 
@@ -85,10 +81,9 @@
     let dmCtx;
     let dmPath = './f2152_depth.png';
     let dmImage = new Image();
-    let dm1Texture = PIXI.Texture.EMPTY;
+    let dm1Texture = null;
     let dm2Texture = PIXI.Texture.EMPTY;
 
-    let mm1Texture = PIXI.Texture.EMPTY;
     let mm2Texture = PIXI.Texture.EMPTY;
 
     let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
@@ -96,9 +91,6 @@
 
     let dm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm2Sprite.name = 'dm2Sprite';
-
-    let mm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
-    mm1Sprite.name = 'mm1Sprite';
 
     let mm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     mm2Sprite.name = 'mm2Sprite';
@@ -115,9 +107,17 @@
       dmCtx.globalAlpha = 1;
       dmCtx.drawImage(dmImage, 0, 0);
 
-      dm1Texture = PIXI.RenderTexture.from(dmCanvas);
+      if (!dm1Texture) {
+        dm1Texture = PIXI.Texture.from(dmCanvas);
+      } else {
+        dm1Texture.update();
+      }
       dm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
 
+
+      bmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      dmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+  
 
       dm1Sprite.texture = dm1Texture; // original opened depth map
 
@@ -125,17 +125,15 @@
       maskSprite.texture = dm2Texture;
 
       mm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
-      mm1Sprite.texture = dm1Texture;
       mm2Sprite.texture = mm2Texture;
 
-      window.displacementFilter.uniforms.displacementMap = dmRenderTexture;
+      window.displacementFilter.uniforms.displacementMap = dmFinalSprite.texture;
       window.offsetFilter.uniforms.displacementMap = dm2Texture;
 
-      window.displacementFilter.uniforms.baseMap = bmRenderTexture;
+      window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
 
-      updateCache2();
 
 
       resize();
@@ -224,9 +222,9 @@
     app.stage.addChild(container);
 
 
-    let bmRenderTexture = PIXI.RenderTexture.create(600, 800);
-    var bmRenderTextureSprite = new PIXI.Sprite(bmRenderTexture);
-    bmRenderTextureSprite.name = 'sprite bmRenderTextureSprite';
+    var bmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
+    bmFinalSprite.name = 'bmFinalSprite';
+
     let bmContainer = new PIXI.Container();
     bmContainer.name = 'bmContainer';
     bmContainer.addChild(baseMapSprite);
@@ -237,9 +235,8 @@
 
 
 
-    let dmRenderTexture = PIXI.RenderTexture.create(600, 800);
-    var dmRTsprite = new PIXI.Sprite(dmRenderTexture);
-    dmRTsprite.name = 'dmRTsprite';
+    var dmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
+    dmFinalSprite.name = 'dmFinalSprite';
 
     let dm1Container = new PIXI.Container();
     dm1Container.name = 'dm1Container';
@@ -249,11 +246,6 @@
     let dm2Container = new PIXI.Container();
     dm2Container.name = 'dm2Container';
     dm2Container.addChild(dm2Sprite);
-
-    let mm1Container = new PIXI.Container();
-    mm1Container.name = 'mm1Container';
-    mm1Container.addChild(mm1Sprite);
-
 
     let mm2Container = new PIXI.Container();
     mm2Container.name = 'mm2Container';
@@ -272,14 +264,13 @@
 
     app.stage.addChild(depthCacheContainer);
     app.stage.addChild(maskCacheContainer);
-    app.stage.addChild(bmContainer);
 
     app.stage.addChild(maskContainer);
 
-    app.stage.addChild(dmRTsprite);
-    app.stage.addChild(bmRenderTextureSprite);
-    app.stage.addChild(mm1Container);
+    app.stage.addChild(dmFinalSprite);
+    app.stage.addChild(bmFinalSprite);
     app.stage.addChild(mm2Container);
+    app.stage.addChild(bmContainer);
     app.stage.addChild(dm2Container);
 
 
@@ -471,8 +462,8 @@
         // Update cursor image
         updateCursorImage();
       }
-      app.renderer.render(bmContainer, bmRenderTexture);
-      app.renderer.render(dm2Container, dmRenderTexture);
+      app.renderer.render(bmContainer, bmFinalSprite.texture);
+      app.renderer.render(dm2Container, dmFinalSprite.texture);
 
       window.requestAnimationFrame(step);
     }
@@ -568,9 +559,7 @@
 
     function endDrawing() {
       isDrawing = false;
-      // updateCache();
-      updateCache2();
-      console.log('endDrawing' + strokes.length);
+      updateCache();
       if (isMaskEditing) {
         refreshMaskListPanel();
       }
@@ -578,18 +567,17 @@
 
     let strokes = [];
 
-
     let cacheSnapshots = [];
 
-    function updateCache2() {
+    function updateCache() {
       let stepNum = strokes.length;
 
-      let currentDepthRenderTexture = PIXI.RenderTexture.create(600, 800);
+      let currentDepthRenderTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       var depthCacheSprite = new PIXI.Sprite(currentDepthRenderTexture);
       depthCacheSprite.name = 'stepCacheSprite-' + stepNum;
       depthCacheContainer.addChild(depthCacheSprite);
 
-      let currentMaskRenderTexture = PIXI.RenderTexture.create(600, 800);
+      let currentMaskRenderTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       var maskCacheSprite = new PIXI.Sprite(currentMaskRenderTexture);
       maskCacheSprite.name = 'maskCacheSprite-' + stepNum;
       maskCacheContainer.addChild(maskCacheSprite);
@@ -649,6 +637,9 @@
 
     function redraw() {
       // Get the closest cached steps
+      if (cacheSnapshots.length == 0) {
+        updateCache();
+      }
       let cached;
       for (let k = 0; k < cacheSnapshots.length; k++) {
         if (cacheSnapshots[k].step <= strokes.length) {
@@ -1357,9 +1348,18 @@
           tmpImg.onload = function () {
             if (confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) {
               bmImage.src = e.target.result;
+              
+              strokes = [];
+              redoList = [];
+              for (let k = 0; k < cacheSnapshots.length; k++) {
+                cacheSnapshots[k].dm.destroy(true);
+                cacheSnapshots[k].mm.destroy(true);
+              }
+              cacheSnapshots = [];
+              
 
               // A 300x200 Black PNG
-              dmImage.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAADIAQMAAABoEU4WAAAAA1BMVEUAAACnej3aAAAAHklEQVRYw+3BMQEAAADCIPunNsReYAAAAAAAAAAQHB54AAEGlim3AAAAAElFTkSuQmCC';
+              dmImage.src = e.target.result;
             }
           }
           tmpImg.src = e.target.result;
