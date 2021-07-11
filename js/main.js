@@ -1165,15 +1165,6 @@
       bm3Texture.update();
     }
 
-
-
-
-
-
-
-
-
-
     function drawMaskLine2(stroke, path, radius, depth, maskid) {
       if (stroke.lines) {
         for (let index = 0; index < stroke.lines.length; ++index) {
@@ -1239,6 +1230,29 @@
       mm2Container.addChild(stroke.lineContainer);
     }
 
+    function createDownloadCanvas() {
+      let tempCanvas = document.createElement('canvas');
+      tempCanvas.width = dmCanvas.width;
+      tempCanvas.height = dmCanvas.height;
+      let tmCtx = tempCanvas.getContext('2d');
+      let tmImageData = tmCtx.createImageData(dmCanvas.width, dmCanvas.height);
+      let tmdd = tmImageData.data;
+
+
+      let dmData = extractPixelsWithoutPostmultiply(dm2Container);
+      let mmDate = extractPixelsWithoutPostmultiply(mm2Container);
+
+      for (var i = 0; i < tmdd.length; i += 4) {
+        tmdd[i + 0] = dmData[i + 0]; // the depth data
+        tmdd[i + 1] = mmDate[i + 1]; // the mask ID data
+        tmdd[i + 2] = 0; // reserved only. currently not used.
+        tmdd[i + 3] = 255; // reserved only. currently always full
+      }
+      tmCtx.putImageData(tmImageData, 0, 0);
+      return tempCanvas;
+    }
+
+
     document.getElementById('mask-select-all').onclick = function () {
       let checkboxes = document.getElementsByName('mask-checkbox');
       for (let checkbox of checkboxes) {
@@ -1270,7 +1284,7 @@
     downloadButton.addEventListener('click', function (e) {
       let link = document.createElement('a');
       link.download = 'download.png';
-      link.href = dmCanvas.toDataURL('image/png');
+      link.href = createDownloadCanvas().toDataURL('image/png');
       link.click();
       link.delete;
     });
@@ -1387,6 +1401,12 @@
               dmImage.src = e.target.result;
               strokes = [];
               redoList = [];
+              
+              for (let k = 0; k < cacheSnapshots.length; k++) {
+                cacheSnapshots[k].dm.destroy(true);
+                cacheSnapshots[k].mm.destroy(true);
+              }
+              cacheSnapshots = [];
             }
           }
           tmpImg.src = e.target.result;
