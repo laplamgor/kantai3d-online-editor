@@ -117,7 +117,7 @@
 
       bmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       dmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
-  
+
 
       dm1Sprite.texture = dm1Texture; // original opened depth map
 
@@ -158,6 +158,10 @@
       this.uniforms.canvasSize[0] = app.renderer.width;
       this.uniforms.canvasSize[1] = app.renderer.height;
 
+      if (!this.uniforms.quality) {
+        this.uniforms.quality = 1.0;
+      }
+
       // draw the filter...
       filterManager.applyFilter(this, input, output);
     }
@@ -167,6 +171,8 @@
         this.uniforms.frameWidth = window.displacementFilter.uniforms.frameWidth;
         this.uniforms.frameHeight = window.displacementFilter.uniforms.frameHeight;
         this.uniforms.canvasSize = [app.renderer.width, app.renderer.height];
+
+        this.uniforms.quality = window.displacementFilter.uniforms.quality;
 
         this.uniforms.textureScale = window.displacementFilter.uniforms.textureScale;
         this.padding = window.displacementFilter.padding;
@@ -216,10 +222,6 @@
     containerReverseMap.filters = [window.offsetFilter];
     containerReverseMap.addChild(reverseMapSprite);
 
-
-
-    app.stage.addChild(containerReverseMap);
-    app.stage.addChild(container);
 
 
     var bmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
@@ -272,6 +274,10 @@
     app.stage.addChild(mm2Container);
     app.stage.addChild(bmContainer);
     app.stage.addChild(dm2Container);
+
+
+    app.stage.addChild(containerReverseMap);
+    app.stage.addChild(container);
 
 
 
@@ -417,10 +423,23 @@
         let pos = (y * w + x) * 4;
         if (needUpdateReverseMapBuffer) {
 
+          // only enable filter when updating cursor position map cache
+          containerReverseMap.filters = [window.offsetFilter];
+
           if (isPanning || isTilting || isDrawing) {
+
+            if (!isDrawing) {
+              // Reduce cursor position accuracy if not drawing for high FPS when panning or tilting
+              // Drawing still need high cursor position accuracy
+              PIXI.DepthPerspectiveFilter.uniforms.quality = 0.1;
+            }
+
             // If the user is changing the viewport, there is not useful to cache the full screen reverse map
             // We only pick one pixel for the current cursor position
             let rgba = extractOnePixel(containerReverseMap, x, y);
+
+            // Resume cursor position accuracy
+            PIXI.DepthPerspectiveFilter.uniforms.quality = 1.0;
 
             r = rgba[0];
             g = rgba[1];
@@ -436,6 +455,9 @@
             b = reverseMapBuffer[pos + 2];
             a = reverseMapBuffer[pos + 3];
           }
+
+          // disable filter to improve performance when no need to updating cursor position cache
+          containerReverseMap.filters = [];
         } else {
           // existing reverse map buffer cache is still valid
           r = reverseMapBuffer[pos];
@@ -1362,7 +1384,7 @@
           tmpImg.onload = function () {
             if (confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) {
               bmImage.src = e.target.result;
-              
+
               strokes = [];
               redoList = [];
               for (let k = 0; k < cacheSnapshots.length; k++) {
@@ -1370,7 +1392,7 @@
                 cacheSnapshots[k].mm.destroy(true);
               }
               cacheSnapshots = [];
-              
+
 
               // A 300x200 Black PNG
               dmImage.src = e.target.result;
@@ -1401,7 +1423,7 @@
               dmImage.src = e.target.result;
               strokes = [];
               redoList = [];
-              
+
               for (let k = 0; k < cacheSnapshots.length; k++) {
                 cacheSnapshots[k].dm.destroy(true);
                 cacheSnapshots[k].mm.destroy(true);
@@ -1674,6 +1696,8 @@ uniform vec2 canvasSize;
 uniform vec4 filterArea;
 uniform vec4 filterClamp;
 
+uniform float quality;
+
 
 varying vec2 vTextureCoord;
 varying vec4 vColor;
@@ -1789,7 +1813,6 @@ vec4 normalMixed(vec2 coord)
     return textureDiffuse(coord)  - vec4(0.5, 0.5, 1.0, 1.0) + normal(coord);
 }
 
-const float compression = 1.0;
 const float dmin = 0.0;
 const float dmax = 1.0;
 
@@ -1802,7 +1825,7 @@ const float dmax = 1.0;
 
 
 float fit = min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]);
-float steps = min(1000.0, max(MAXSTEPS *length(offset  / fit), 30.0));
+float steps = min(1000.0, max(MAXSTEPS *length(offset  / fit), 30.0)) * quality;
 
 void main(void)
 {
@@ -1817,7 +1840,7 @@ void main(void)
     vec2 pos = (vTextureCoord);
     mat2 vector = baseVector;
 
-    float dstep = compression / (steps - 1.0);
+    float dstep = 1.0 / (steps - 1.0);
     vec2 vstep = (vector[1] - vector[0]) / vec2((steps - 1.0));
 
     vec2 posSumLast = vec2(0.0);
