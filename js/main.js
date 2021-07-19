@@ -483,6 +483,17 @@
 
         // Update cursor image
         updateCursorImage();
+
+
+        
+        // Update cursor tooltip
+        let depthValue = extractOnePixel(dm2Container, curOnTexX, curOnTexY)[0];
+        let maskId = extractOnePixel(mm2Container, curOnTexX, curOnTexY)[1];
+        document.getElementById('depth-value-span').innerText = depthValue;
+        document.getElementById('mask-id-span').innerText = maskId;
+        document.getElementById('mask-id-span').innerText = maskId;
+        document.getElementById('tooltip-span').style.backgroundColor = "rgba(" + (maskColor[maskId].r / 2 + 127) + "," + (maskColor[maskId].g / 2 + 127) + "," + (maskColor[maskId].b / 2 + 127) + "," + 1 + ")";
+
       }
       app.renderer.render(bmContainer, bmFinalSprite.texture);
       app.renderer.render(dm2Container, dmFinalSprite.texture);
@@ -986,7 +997,7 @@
       for (let maskId = 0; maskId < 256; maskId++) {
         let li = document.createElement('li');
         li.id = 'mask-item-' + maskId;
-        li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g + "," + maskColor[maskId].b + "," + 0.5 + ")";;
+        li.style.backgroundColor = "rgba(" + maskColor[maskId].r + "," + maskColor[maskId].g + "," + maskColor[maskId].b + "," + 0.5 + ")";
 
         // Create checkbox
         let input = document.createElement("input");
@@ -1461,10 +1472,78 @@
         window.displacementFilter.uniforms.displayMode = 1;
       } else if (key.key === '3') {
         window.displacementFilter.uniforms.displayMode = 2;
+
+      } else if (key.key === 'q') {
+        UIkit.switcher("#top-tab").show(0);
+        UIkit.switcher("#top-switcher").show(0);
+      } else if (key.key === 'w') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+      } else if (key.key === 'e') {
+        UIkit.switcher("#top-tab").show(2);
+        UIkit.switcher("#top-switcher").show(2);
+      } else if (key.key === 'r') {
+        UIkit.switcher("#top-tab").show(3);
+        UIkit.switcher("#top-switcher").show(3);
+      } else if (key.key === 't') {
+        UIkit.switcher("#top-tab").show(4);
+        UIkit.switcher("#top-switcher").show(4);
+
+      } else if (key.key === 'a') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+        UIkit.switcher("#brush-tab").show(0);
+        UIkit.switcher("#brush-switcher").show(0);
+      } else if (key.key === 's') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+        UIkit.switcher("#brush-tab").show(1);
+        UIkit.switcher("#brush-switcher").show(1);
+      } else if (key.key === 'd') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+        UIkit.switcher("#brush-tab").show(2);
+        UIkit.switcher("#brush-switcher").show(2);
+
+      } else if (key.key === 'z') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+        UIkit.switcher("#flip-switcher").show(0);
+        UIkit.switcher("#pen-flip-switcher").show(0);
+        UIkit.switcher("#brush-tab").show(0);
+        UIkit.switcher("#brush-switcher").show(0);
+      } else if (key.key === 'x') {
+        UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#top-switcher").show(1);
+        UIkit.switcher("#flip-switcher").show(1);
+        UIkit.switcher("#pen-flip-switcher").show(1);
+        UIkit.switcher("#brush-tab").show(0);
+        UIkit.switcher("#brush-switcher").show(0);
+
+
+      } else if (key.key === ',' && strokes.length != 0 && !isDrawing) {
+        redoList.push(strokes.pop());
+        redraw();
+        document.getElementById('undo-button').disabled = strokes.length == 0;
+        document.getElementById('redo-button').disabled = false;
+      } else if (key.key === '.' && redoList.length != 0 && !isDrawing) {
+        strokes.push(redoList.pop());
+        redraw()
+        document.getElementById('undo-button').disabled = false;
+        document.getElementById('redo-button').disabled = redoList.length == 0;
       }
     }
     document.addEventListener('keydown', onKeyDown);
 
+
+    var tooltipSpan = document.getElementById('tooltip-span');
+
+    window.onmousemove = function (e) {
+      let x = e.clientX;
+      let y = e.clientY;
+      tooltipSpan.style.top = (y + 40) + 'px';
+      tooltipSpan.style.left = (x + 40) + 'px';
+    };
   }
 
 
