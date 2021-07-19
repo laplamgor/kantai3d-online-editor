@@ -305,7 +305,21 @@
           isPanning = true;
           return false;
         case 0:
-          startDrawing();
+          if (modifyKey == 'shift') {
+            let checkbox = document.getElementById('mask-' + document.getElementById('mask-id-span').innerText);
+            if (checkbox) {
+              checkbox.checked = true;
+              updateMaskIndicator();
+            }
+          } else if (modifyKey == 'alt') {
+            let checkbox = document.getElementById('mask-' + document.getElementById('mask-id-span').innerText);
+            if (checkbox) {
+              checkbox.checked = false;
+              updateMaskIndicator();
+            }
+          } else {
+            startDrawing();
+          }
           break;
       }
     }
@@ -331,7 +345,9 @@
           isPanning = false;
           break;
         case 0:
-          endDrawing();
+          if (isDrawing) {
+            endDrawing();
+          }
           break;
       }
     }
@@ -490,7 +506,6 @@
         let depthValue = extractOnePixel(dm2Container, curOnTexX, curOnTexY)[0];
         let maskId = extractOnePixel(mm2Container, curOnTexX, curOnTexY)[1];
         document.getElementById('depth-value-span').innerText = depthValue;
-        document.getElementById('mask-id-span').innerText = maskId;
         document.getElementById('mask-id-span').innerText = maskId;
         document.getElementById('tooltip-span').style.backgroundColor = "rgba(" + (maskColor[maskId].r / 2 + 127) + "," + (maskColor[maskId].g / 2 + 127) + "," + (maskColor[maskId].b / 2 + 127) + "," + 1 + ")";
 
@@ -1532,9 +1547,26 @@
         document.getElementById('undo-button').disabled = false;
         document.getElementById('redo-button').disabled = redoList.length == 0;
       }
+
+
+      if (key.altKey) {
+        key.preventDefault();
+        modifyKey = 'alt';
+      } else if (key.shiftKey) {
+        key.preventDefault();
+        modifyKey = 'shift';
+      }
     }
     document.addEventListener('keydown', onKeyDown);
 
+    
+    function onKeyUp(key) {
+      modifyKey = '';
+    }
+    document.addEventListener('keyup', onKeyUp);
+
+    
+    let modifyKey = '';
 
     var tooltipSpan = document.getElementById('tooltip-span');
 
