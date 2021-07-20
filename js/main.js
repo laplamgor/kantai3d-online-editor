@@ -356,6 +356,22 @@
     window.displacementFilter.uniforms.zoom = 1.0;
     $('#main-canvas').bind('mousewheel', function (e) {
 
+      // When pressing ctrl, change brush size
+      if (e.ctrlKey) {
+        // Prevent Chrome to scale the page
+        e.preventDefault();
+
+        console.log(e.originalEvent.wheelDelta);
+        if (e.originalEvent.wheelDelta > 0 && brushSizeSliders[0].value < 200 && !isDrawing) {
+          brushSizeSliders[0].value = parseInt(brushSizeSliders[0].value) * 1.1 + 1;
+          brushSizeChange({target:{value:brushSizeSliders[0].value}});
+        } else if (e.originalEvent.wheelDelta < 0 && brushSizeSliders[0].value > 1 && !isDrawing) {
+          brushSizeSliders[0].value = (parseInt(brushSizeSliders[0].value) - 1) * 0.9;
+          brushSizeChange({target:{value:brushSizeSliders[0].value}});
+        }
+        return;
+      }
+
       needUpdateReverseMapBuffer = true;
 
       if (e.originalEvent.wheelDelta / 120 > 0) {
