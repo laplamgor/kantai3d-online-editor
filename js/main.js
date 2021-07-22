@@ -361,7 +361,6 @@
         // Prevent Chrome to scale the page
         e.preventDefault();
 
-        console.log(e.originalEvent.wheelDelta);
         if (e.originalEvent.wheelDelta > 0 && brushSizeSliders[0].value < 200 && !isDrawing) {
           brushSizeSliders[0].value = parseInt(brushSizeSliders[0].value) * 1.1 + 1;
           brushSizeChange({target:{value:brushSizeSliders[0].value}});
@@ -1571,6 +1570,8 @@
       } else if (key.shiftKey) {
         key.preventDefault();
         modifyKey = 'shift';
+      } else {
+        modifyKey = '';
       }
     }
     document.addEventListener('keydown', onKeyDown);
