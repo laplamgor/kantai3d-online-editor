@@ -38,19 +38,20 @@
         left: 0
       }
     </style>
-    <ul class="uk-child-width-expand uk-tab uk-margin-remove uk-background-muted" uk-switcher uk-sticky="offset: 0">
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="File"><i
+    <ul id="top-tab" class="uk-child-width-expand uk-tab uk-margin-remove uk-background-muted"
+      uk-switcher="connect: #top-switcher" uk-sticky="offset: 0" uk-tab>
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="File (q)"><i
             class="material-icons icon-align">photo_library</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Paint"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Paint (w)"><i
             class="material-icons icon-align">edit</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Masks"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Masks (e)"><i
             class="material-icons icon-align">layers</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="History"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="History (r)"><i
             class="material-icons icon-align">history</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="About"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="About (t)"><i
             class="material-icons icon-align">info</i></a></li>
     </ul>
-    <ul id="my-id" class="uk-switcher uk-margin uk-padding-small">
+    <ul id="top-switcher" class="uk-switcher uk-margin uk-padding-small">
 
       <li>
         <div class="uk-margin-xlarge-bottom">
@@ -85,11 +86,11 @@
 
       <!-- Brush page -->
       <li>
-        <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
+        <ul id="brush-tab" class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
           uk-switcher="connect: #brush-switcher">
-          <li><a uk-tooltip="Pen"><i class="material-icons icon-align">brush</i></a></li>
-          <li><a uk-tooltip="Roller"><i class="material-icons icon-align">format_paint</i></a></li>
-          <li><a uk-tooltip="Smooth"><i class="material-icons icon-align">water_drop</i></a></li>
+          <li><a uk-tooltip="Pen (a)"><i class="material-icons icon-align">brush</i></a></li>
+          <li><a uk-tooltip="Roller (s)"><i class="material-icons icon-align">format_paint</i></a></li>
+          <li><a uk-tooltip="Smooth (d)"><i class="material-icons icon-align">water_drop</i></a></li>
         </ul>
 
         <ul class="uk-switcher uk-margin" id="brush-switcher">
@@ -110,10 +111,10 @@
               </div>
 
 
-              <ul class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
+              <ul id="flip-switcher" class="uk-child-width-expand uk-subnav uk-subnav-pill uk-text-center"
                 uk-switcher="connect: #pen-flip-switcher">
-                <li><a uk-tooltip="Convex"><i class="material-icons icon-align">wb_twilight</i></a></li>
-                <li><a uk-tooltip="Concave"><i class="material-icons icon-align">upcoming</i></a></li>
+                <li><a uk-tooltip="Convex (z)"><i class="material-icons icon-align">wb_twilight</i></a></li>
+                <li><a uk-tooltip="Concave (x)"><i class="material-icons icon-align">upcoming</i></a></li>
               </ul>
 
               Depth Value
@@ -237,10 +238,10 @@
             overflow-x: hidden;
             overflow-y: overlay;
           ">
-          <button class="uk-button uk-button-default uk-padding-remove" id="undo-button" uk-tooltip="Undo" disabled><i
-              class="material-icons icon-align">undo</i></button>
-          <button class="uk-button uk-button-default uk-padding-remove" id="redo-button" uk-tooltip="Undo" disabled><i
-              class="material-icons icon-align">redo</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="undo-button" uk-tooltip="Undo (,)"
+            disabled><i class="material-icons icon-align">undo</i></button>
+          <button class="uk-button uk-button-default uk-padding-remove" id="redo-button" uk-tooltip="Undo (.)"
+            disabled><i class="material-icons icon-align">redo</i></button>
         </div>
       </li>
       <li>About</li>
@@ -248,8 +249,19 @@
 
   </div>
 
-  <div style="margin-left: 320px; height: 100%; cursor: crosshair; ">
+  <div style="margin-left: 320px; height: 100%; cursor: crosshair; user-select: none;" class="tooltip">
     <canvas id="main-canvas" oncontextmenu="return false;"></canvas>
+
+
+    <div id="tooltip-span" class="uk-card uk-card-secondary uk-box-shadow-xlarge uk-padding-small uk-width-auto">
+
+      <p>
+        <span>Depth Value: </span><span id="depth-value-span">0</span>
+      </p>
+      <p>
+        <span>Mask ID: </span><span id="mask-id-span">0</span>
+      </p>
+    </div>
   </div>
 
   <script src="js/main.js"></script>
