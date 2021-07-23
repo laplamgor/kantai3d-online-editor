@@ -518,12 +518,17 @@
 
         
         // Update cursor tooltip
-        let depthValue = extractOnePixel(dm2Container, curOnTexX, curOnTexY)[0];
-        let maskId = extractOnePixel(mm2Container, curOnTexX, curOnTexY)[1];
-        document.getElementById('depth-value-span').innerText = depthValue;
-        document.getElementById('mask-id-span').innerText = maskId;
-        document.getElementById('tooltip-span').style.backgroundColor = "rgba(" + (maskColor[maskId].r / 2 + 127) + "," + (maskColor[maskId].g / 2 + 127) + "," + (maskColor[maskId].b / 2 + 127) + "," + 1 + ")";
+        if (modifyKey != '') {
+          document.getElementById('tooltip-span').style.visibility = "visible";
 
+          let depthValue = extractOnePixel(dm2Container, curOnTexX, curOnTexY)[0];
+          let maskId = extractOnePixel(mm2Container, curOnTexX, curOnTexY)[1];
+          document.getElementById('depth-value-span').innerText = depthValue;
+          document.getElementById('mask-id-span').innerText = maskId;
+          document.getElementById('tooltip-span').style.backgroundColor = "rgba(" + (maskColor[maskId].r / 2 + 127) + "," + (maskColor[maskId].g / 2 + 127) + "," + (maskColor[maskId].b / 2 + 127) + "," + 1 + ")";
+        } else {
+          document.getElementById('tooltip-span').style.visibility = "hidden";
+        }
       }
       app.renderer.render(bmContainer, bmFinalSprite.texture);
       app.renderer.render(dm2Container, dmFinalSprite.texture);
