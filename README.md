@@ -4,7 +4,7 @@
 
 A depth map sculpting tool running on web browsers
 
-# System requirement
+# Client System requirements
 - Any lastest Desktop version of Chromium based Browser
   - Tested with Google Chrome 91+ and Microsoft Edge 92+
 - WebGL2 compatibile Hardware, OS, Drivers
