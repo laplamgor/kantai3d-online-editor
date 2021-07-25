@@ -4,6 +4,12 @@
 
 A depth map sculpting tool running on web browsers
 
+# System requirement
+- Any lastest Desktop version of Chromium based Browser
+  - Tested with Google Chrome 91+ and Microsoft Edge 92+
+- WebGL2 compatibile Hardware, OS, Drivers
+  - A discrete graphics card is strongly recommended
+- Keyboard and a Mouse with a clickable scrollwheel
 
 # Try it now
 No need to install.
@@ -17,5 +23,6 @@ https://github.com/laplamgor/kantai3d-online-editor/wiki
 
 # Build or host on your own
 Kantai3D Online Editor is completely static and does not require any build tool.
+
 It works on most common web server (e.g. Nginx) and hosting services (e.g. GitHub Pages). Nginx for example.
 
