@@ -70,6 +70,15 @@
       window.displacementFilter.uniforms.textureScale = 1.0;
 
 
+      // After updating baseMap, give it a blank depth map as start
+      let tempCanvas = document.createElement('canvas');
+      tempCanvas.width = bmImage.width;
+      tempCanvas.height = bmImage.height;
+      let tmCtx = tempCanvas.getContext('2d');
+      tmCtx.fillStyle = "rgba(127,0,0,1)"; // Everything on the middle plane and mask ID 0
+      tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
+      dmImage.src = tempCanvas.toDataURL('image/png');
+
       resize();
       refreshMaskListPanel(true);
     }
@@ -1440,7 +1449,7 @@
               cacheSnapshots = [];
 
 
-              // A 300x200 Black PNG
+              // Just to make sure DM has an image of same size
               dmImage.src = e.target.result;
             }
           }
@@ -1449,6 +1458,7 @@
       })(img);
       reader.readAsDataURL(event.dataTransfer.files[0]);
     }
+
     function dropDepthMap(event) {
       event.preventDefault();
       if (event.dataTransfer.files.length != 1) {
