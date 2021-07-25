@@ -71,13 +71,15 @@
 
 
       // After updating baseMap, give it a blank depth map as start
-      let tempCanvas = document.createElement('canvas');
-      tempCanvas.width = bmImage.width;
-      tempCanvas.height = bmImage.height;
-      let tmCtx = tempCanvas.getContext('2d');
-      tmCtx.fillStyle = "rgba(127,0,0,1)"; // Everything on the middle plane and mask ID 0
-      tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
-      dmImage.src = tempCanvas.toDataURL('image/png');
+      if (dmImage.src == bmImage.src) {
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = bmImage.width;
+        tempCanvas.height = bmImage.height;
+        let tmCtx = tempCanvas.getContext('2d');
+        tmCtx.fillStyle = "rgba(127,0,0,1)"; // Everything on the middle plane and mask ID 0
+        tmCtx.fillRect(0, 0, bmImage.width, bmImage.height);
+        dmImage.src = tempCanvas.toDataURL('image/png');
+      }
 
       resize();
       refreshMaskListPanel(true);
