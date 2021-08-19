@@ -418,6 +418,9 @@
 
     let endx = 0;
     let endy = 0;
+
+
+
     function step(timestamp) {
       if (baseMapSprite && baseMapSprite.texture && app.renderer.view.style) {
 
@@ -543,11 +546,8 @@
       }
       app.renderer.render(bmContainer, bmFinalSprite.texture);
       app.renderer.render(dm2Container, dmFinalSprite.texture);
-
-      window.requestAnimationFrame(step);
     }
-
-    window.requestAnimationFrame(step);
+    PIXI.Ticker.shared.add(step);
 
     // Listen for window resize events
     window.addEventListener('resize', resize);
@@ -877,9 +877,23 @@
         }).moveTo(path[0].x - 0.5, path[0].y - 0.5);
         pixiLine.name = 'flatLine a:' + alpha + ' r:' + radius;
 
+        let point3;
+        let point2;
+        let point1;
         for (let index = 0; index < path.length; ++index) {
           let point = path[index];
-          pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+          if ((point3 && point.x == point3.x && point.y == point3.y)
+           || (point2 && point.x == point2.x && point.y == point2.y)
+           || (point1 && point.x == point1.x && point.y == point1.y)) {
+            // pixi has bug when drawing line when position n is same as n+2
+            // https://github.com/pixijs/pixijs/issues/5006
+            // skip this position
+          } else {
+            pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+            point3 = point2;
+            point2 = point1;
+            point1 = point;
+          }
         }
       }
 
@@ -1282,9 +1296,24 @@
         }).moveTo(path[0].x - 0.5, path[0].y - 0.5);
         pixiLine.name = 'flatLine a:' + 1 + ' r:' + radius;
 
+        
+        let point3;
+        let point2;
+        let point1;
         for (let index = 0; index < path.length; ++index) {
           let point = path[index];
-          pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+          if ((point3 && point.x == point3.x && point.y == point3.y)
+           || (point2 && point.x == point2.x && point.y == point2.y)
+           || (point1 && point.x == point1.x && point.y == point1.y)) {
+            // pixi has bug when drawing line when position n is same as n+2
+            // https://github.com/pixijs/pixijs/issues/5006
+            // skip this position
+          } else {
+            pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+            point3 = point2;
+            point2 = point1;
+            point1 = point;
+          }
         }
       }
 
