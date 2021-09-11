@@ -1551,46 +1551,36 @@
 
       } else if (key.key === 'q') {
         UIkit.switcher("#top-tab").show(0);
-        UIkit.switcher("#top-switcher").show(0);
       } else if (key.key === 'w') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
       } else if (key.key === 'e') {
         UIkit.switcher("#top-tab").show(2);
-        UIkit.switcher("#top-switcher").show(2);
       } else if (key.key === 'r') {
         UIkit.switcher("#top-tab").show(3);
-        UIkit.switcher("#top-switcher").show(3);
       } else if (key.key === 't') {
         UIkit.switcher("#top-tab").show(4);
-        UIkit.switcher("#top-switcher").show(4);
 
       } else if (key.key === 'a') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
         UIkit.switcher("#brush-tab").show(0);
         UIkit.switcher("#brush-switcher").show(0);
       } else if (key.key === 's') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
         UIkit.switcher("#brush-tab").show(1);
         UIkit.switcher("#brush-switcher").show(1);
       } else if (key.key === 'd') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
         UIkit.switcher("#brush-tab").show(2);
         UIkit.switcher("#brush-switcher").show(2);
 
       } else if (key.key === 'z') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
         UIkit.switcher("#flip-switcher").show(0);
         UIkit.switcher("#pen-flip-switcher").show(0);
         UIkit.switcher("#brush-tab").show(0);
         UIkit.switcher("#brush-switcher").show(0);
       } else if (key.key === 'x') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#top-switcher").show(1);
         UIkit.switcher("#flip-switcher").show(1);
         UIkit.switcher("#pen-flip-switcher").show(1);
         UIkit.switcher("#brush-tab").show(0);
