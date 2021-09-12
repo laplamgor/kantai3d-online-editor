@@ -2330,10 +2330,11 @@ void main(void)
         dpos = 1.0 - i * dstep;
         float depth = textureDepth(vpos).r;
 
-        if (textureDiffuseNoBg(vpos)[3] == 0.0)
-        {
-            depth = 0.0;
-        }
+        // This is good for in-game rendering but bad for cursor projection when drawing depth maps
+        // if (textureDiffuseNoBg(vpos)[3] == 0.0)
+        // {
+        //     depth = 0.0;
+        // }
 
         depth = clamp(depth, dmin, dmax);
 
