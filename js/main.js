@@ -1681,7 +1681,8 @@
         window.displacementFilter.uniforms.displayMode = 1;
       } else if (key.key === '3') {
         window.displacementFilter.uniforms.displayMode = 2;
-
+      } else if (key.key === '4') {
+        gridGraphics.visible = !gridGraphics.visible;
       } else if (key.key === 'q') {
         UIkit.switcher("#top-tab").show(0);
       } else if (key.key === 'w') {
@@ -1692,7 +1693,8 @@
         UIkit.switcher("#top-tab").show(3);
       } else if (key.key === 't') {
         UIkit.switcher("#top-tab").show(4);
-
+      } else if (key.key === 'y') {
+        UIkit.switcher("#top-tab").show(5);
       } else if (key.key === 'a') {
         UIkit.switcher("#top-tab").show(1);
         UIkit.switcher("#brush-tab").show(0);
