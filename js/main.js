@@ -10,6 +10,18 @@
       }
     );
 
+
+    window.jigglePositions = [];
+    window.jiggleVelocities = [];
+    window.jiggleForces = [];
+  
+    window.jiggleStaticFlags = [];
+    window.jiggleMovement = [];
+  
+    window.damping = [];//1.0 / 8; // 1 2 4 8 16 
+    window.springiness = [];//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+
+
     let curOnTexX = 0;
     let curOnTexY = 0;
 
@@ -145,8 +157,25 @@
       window.offsetFilter.uniforms.baseMap = bm3Texture;
 
 
+      window.jiggleMeshW = Math.ceil(dmImage.width / 10.0);
+      window.jiggleMeshH = Math.ceil(dmImage.height / 10.0);
+      window.jiggledBaseMapMesh = new PIXI.SimplePlane(bmFinalSprite.texture, window.jiggleMeshW, window.jiggleMeshH);
+      window.jiggledDepthMapMesh = new PIXI.SimplePlane(dm1Texture, window.jiggleMeshW, window.jiggleMeshH);
+      window.jiggledBaseMapMesh.scale.set(1, 1);
 
 
+      // This is the render texture of the jiggled mseh
+      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(bm3Texture.width, bm3Texture.height));
+      window.jiggledDepthMapRT.visible = false;
+      app.stage.addChild(window.jiggledDepthMapRT);
+
+      window.mousex1 = null;
+      window.mousey1 = null;
+      prepareJiggle(dm1Texture, dm1Texture);
+      window.displacementFilter.uniforms.displacementMap = window.jiggledDepthMapRT.texture;
+
+      window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
+      
       resize();
       redraw();
       refreshMaskListPanel(true);
@@ -172,6 +201,92 @@
       if (!this.uniforms.quality) {
         this.uniforms.quality = 1.0;
       }
+
+
+      
+    
+      ////////
+      if (window.jiggledBaseMapMesh) {
+        var vertices = window.jiggledBaseMapMesh.geometry.buffers[0].data;
+        var vertices2 = window.jiggledDepthMapMesh.geometry.buffers[0].data;
+      
+        var newMx = window.displacementFilter.uniforms.offset[0];
+        var newMy = window.displacementFilter.uniforms.offset[1];
+        
+        var baseMap = bm3Texture;
+        var depthMap = dm2Texture;
+        if (baseMap && baseMap.baseTexture && depthMap && depthMap.baseTexture) {
+      
+            window.My2 = window.My;
+            window.Mx2 = window.Mx;
+            window.My = newMy;
+            window.Mx = newMx;
+            for (var y = 0; y < window.jiggleMeshH; y++) {
+                for (var x = 0; x < window.jiggleMeshW; x++) {
+                    resetForce(x, y);
+                }
+            }
+      
+            if (window.Mx && window.My && window.Mx2 && window.My2 && newMx != -999999 && window.Mx != -999999 && window.Mx2 != -999999) {
+        
+                var aX = (window.Mx2 - window.Mx) - (window.Mx - newMx);
+                var aY = (window.My2 - window.My) - (window.My - newMy);
+        
+                for (var y = 0; y < window.jiggleMeshH; y++) {
+                    for (var x = 0; x < window.jiggleMeshW; x++) {
+                        var m = window.jiggleMovement[y * window.jiggleMeshW + x];
+                        window.jiggleForces[y * window.jiggleMeshW + x].x += aX * m * -50;
+                        window.jiggleForces[y * window.jiggleMeshW + x].y += aY * m * 50;
+                    }
+                }
+            }
+        
+      
+            for (var y = 0; y < window.jiggleMeshH; y++) {
+                for (var x = 0; x < window.jiggleMeshW; x++) {
+                    if (x != 0) {
+                        springUpdate(x - 1, y, x, y);
+                    }
+                    if (y != 0) {
+                        springUpdate(x, y - 1, x, y);
+                    }
+                }
+            }
+        
+        
+            for (var y = 0; y < window.jiggleMeshH; y++) {
+                for (var x = 0; x < window.jiggleMeshW; x++) {
+                    addDampingForce(x, y);
+                    update(x, y);
+                }
+            }
+      
+        
+            for (var i = 0; i < window.jigglePositions.length; i++) {
+                var pos = window.jigglePositions[i];
+                vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
+                vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
+        
+                vertices2[i * 2] = vertices[i * 2];
+                vertices2[i * 2 + 1] = vertices[i * 2 + 1];
+            }
+        }
+        window.jiggledBaseMapMesh.geometry.buffers[0].update();
+        window.jiggledDepthMapMesh.geometry.buffers[0].update();
+    
+        window.jiggledDepthMapMesh.visible = true;
+        app.renderer.render(jiggledDepthMapMesh, window.jiggledDepthMapRT.texture);
+        window.jiggledDepthMapMesh.visible = false;
+
+        window.jiggledBaseMapMesh.visible = true;
+        app.renderer.render(jiggledBaseMapMesh, window.jiggledBaseMapRT.texture);
+        window.jiggledBaseMapMesh.visible = false;
+        window.displacementFilter.uniforms.baseMap = window.jiggledBaseMapRT.texture;
+      }
+      ////////
+    
+    
+    
 
       // draw the filter...
       filterManager.applyFilter(this, input, output);
@@ -290,6 +405,13 @@
     app.stage.addChild(containerReverseMap);
     app.stage.addChild(container);
 
+
+    var gridGraphics = new PIXI.Graphics();
+    gridGraphics.scale.set(1, 1);
+    bmContainer.addChild(gridGraphics);
+
+    // app.stage.addChild(window.jiggledDepthMapRT);
+    // app.stage.addChild(window.jiggledBaseMapRT);
 
 
 
@@ -453,6 +575,11 @@
           panY = endy;
         }
 
+        if (window.jiggledBaseMapMesh) {
+          var vertices = window.jiggledBaseMapMesh.geometry.buffers[0].data;
+          renderVertices(vertices);
+        }
+
         handleMouseMove();
 
       }
@@ -545,7 +672,13 @@
         }
       }
       app.renderer.render(bmContainer, bmFinalSprite.texture);
+      if (window.jiggledBaseMapMesh) {
+        window.jiggledBaseMapMesh.textureUpdated();
+      }
       app.renderer.render(dm2Container, dmFinalSprite.texture);
+      if (window.jiggledDepthMapMesh) {
+        window.jiggledDepthMapMesh.textureUpdated();
+      }
     }
     PIXI.Ticker.shared.add(step);
 
@@ -1629,6 +1762,183 @@
       tooltipSpan.style.top = (y + 40) + 'px';
       tooltipSpan.style.left = (x + 40) + 'px';
     };
+
+
+
+    //// Jiggle related
+    function prepareJiggle(baseMap, depthMap) {
+
+      window.jigglePositions = [];
+      window.jiggleVelocities = [];
+      window.jiggleForces = [];
+
+      window.jiggleStaticFlags = [];
+      window.jiggleMovement = [];
+
+      window.damping = [];//1.0 / 8; // 1 2 4 8 16 
+      window.springiness = [];//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+      
+
+      var depthImg = depthMap.baseTexture.source;
+      var tempCanvas = document.createElement('canvas');
+      tempCanvas.width = depthImg.width;
+      tempCanvas.height = depthImg.height;
+      let tmCtx = tempCanvas.getContext('2d');
+      tmCtx.drawImage(depthImg, 0, 0);
+      var dmData = tmCtx.getImageData(0, 0, depthImg.width, depthImg.height).data;
+
+
+      window.jiggleMeshW = Math.ceil(baseMap.width / 10.0);
+      window.jiggleMeshH = Math.ceil(baseMap.height / 10.0);
+
+      // This is the jiggled mseh
+      window.jiggledDepthMapMesh = new PIXI.SimplePlane(dmFinalSprite.texture, window.jiggleMeshW, window.jiggleMeshH);
+      window.jiggledDepthMapMesh.visible = false;
+
+      // This is the render texture of the jiggled mseh
+      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMap.width, baseMap.height));
+      window.jiggledDepthMapRT.visible = false;
+      window.jiggledBaseMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMap.width, baseMap.height));
+      window.jiggledBaseMapRT.visible = false;
+
+      
+      window.jiggledBaseMapMesh = new PIXI.SimplePlane(bmFinalSprite.texture, window.jiggleMeshW, window.jiggleMeshH);
+      
+      app.stage.addChild(window.jiggledDepthMapRT);
+      app.stage.addChild(window.jiggledDepthMapMesh);
+      app.stage.addChild(window.jiggledBaseMapMesh);
+      app.stage.addChild(window.jiggledBaseMapRT);
+      
+      window.gridW = baseMap.width / (window.jiggleMeshW - 1.0);
+      window.gridH = baseMap.height / (window.jiggleMeshH - 1.0);
+      for (var y = 0; y < window.jiggleMeshH; y++) {
+        for (var x = 0; x < window.jiggleMeshW; x++) {
+          window.jigglePositions.push({ x: window.gridW * x, y: y * window.gridH });
+          window.jiggleVelocities.push({ x: 0, y: 0 });
+          window.jiggleForces.push({ x: 0, y: 0 });
+
+          var r = dmData[(Math.floor(y * window.gridH) * baseMap.width + Math.floor(x * window.gridW)) * 4 + 0];
+          var b = dmData[(Math.floor(y * window.gridH) * baseMap.width + Math.floor(x * window.gridW)) * 4 + 2];
+
+          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));//1.0 / 8; // 1 2 4 8 16 
+          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+
+          window.jiggleStaticFlags.push(b == 0);
+          window.jiggleMovement.push((r - 127.0) / 128.0);
+        }
+      }
+      
+      window.Mx = null;
+      window.My = null;
+      window.Mx2 = null;
+      window.My2 = null;
+    }
+
+    function resetForce(x, y) {
+      window.jiggleForces[y * window.jiggleMeshW + x] = { x: 0, y: 0 };
+    }
+
+    function addForce(x, y, addX, addY) {
+      var f = window.jiggleForces[y * window.jiggleMeshW + x];
+      f.x += addX;
+      f.y += addY;
+    }
+
+    function addDampingForce(x, y) {
+      var v = jiggleVelocities[y * window.jiggleMeshW + x];
+      var f = window.jiggleForces[y * window.jiggleMeshW + x];
+      f.x -= v.x * window.damping[y * window.jiggleMeshW + x];
+      f.y -= v.y * window.damping[y * window.jiggleMeshW + x];
+    }
+
+
+    function update(x, y) {
+      var p = window.jigglePositions[y * window.jiggleMeshW + x];
+      var v = window.jiggleVelocities[y * window.jiggleMeshW + x];
+      var f = window.jiggleForces[y * window.jiggleMeshW + x];
+
+      if (window.jiggleStaticFlags[y * window.jiggleMeshW + x] == false) {
+          v.x += f.x;
+          v.y += f.y;
+          p.x += v.x;
+          p.y += v.y;
+      }
+    }
+
+
+
+    function springUpdate(x1, y1, x2, y2) {
+      if (window.jiggleStaticFlags[x1 + y1 * window.jiggleMeshW.w] && !window.jiggleStaticFlags[x2 + y2 * window.jiggleMeshW.w]) 
+          return;
+
+      var distanceOrigin = (x2 - x1) * window.gridW + (y2 - y1) * window.gridH;
+      
+      
+
+      var p1 = window.jigglePositions[y1 * window.jiggleMeshW + x1];
+      var p2 = window.jigglePositions[y2 * window.jiggleMeshW + x2];
+
+      var distance = len(sub(p1, p2));
+
+      var springiness = (window.springiness[y1 * window.jiggleMeshW + x1] + window.springiness[y2 * window.jiggleMeshW + x2]) / 2;
+
+      var springForce = springiness * (distanceOrigin - distance);
+      var frcToAdd = tim(normalize(sub(p1, p2)), springForce);
+
+      addForce(x1, y1, frcToAdd.x, frcToAdd.y);
+      addForce(x2, y2, -frcToAdd.x, -frcToAdd.y);
+    }
+
+
+    function len(v) {
+      return Math.sqrt(v.x * v.x + v.y * v.y);
+    }
+
+    function normalize(v) {
+      var l = len(v);
+      return { x: v.x / l, y: v.y / l };
+    }
+
+    function sub(v1, v2) {
+      return { x: v1.x - v2.x, y: v1.y - v2.y }
+    }
+
+    function tim(v1, s) {
+      return { x: v1.x * s, y: v1.y * s }
+    }
+
+    function renderVertices(vertices) {
+      gridGraphics.clear();
+      gridGraphics.lineStyle(2, 0xffc2c2, 0.2);
+
+      var w = window.jiggleMeshW;
+      var h = window.jiggleMeshH;
+
+      var index = 0;
+      for (var r = 0; r < h; r++) {
+        for (var c = 0; c < w; c++) {
+          if (c === 0) {
+            gridGraphics.moveTo(vertices[index * 2], vertices[index * 2 + 1]);
+          } else {
+            gridGraphics.lineTo(vertices[index * 2], vertices[index * 2 + 1]);
+          }
+          index++;
+        }
+      }
+
+      var index = 0;
+      for (var c = 0; c < w; c++) {
+        index = c;
+        gridGraphics.moveTo(vertices[index * 2], vertices[index * 2 + 1]);
+        for (var r = 0; r < h - 1; r++) {
+          index += w;
+          gridGraphics.lineTo(vertices[index * 2], vertices[index * 2 + 1]);
+        }
+      }
+    }
+
+
+
   }
 
 
