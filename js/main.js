@@ -209,67 +209,67 @@
       if (window.jiggledBaseMapMesh) {
         var vertices = window.jiggledBaseMapMesh.geometry.buffers[0].data;
         var vertices2 = window.jiggledDepthMapMesh.geometry.buffers[0].data;
-      
+
         var newMx = window.displacementFilter.uniforms.offset[0];
         var newMy = window.displacementFilter.uniforms.offset[1];
-        
+
         var baseMap = bm3Texture;
         var depthMap = dm2Texture;
         if (baseMap && baseMap.baseTexture && depthMap && depthMap.baseTexture) {
-      
-            window.My2 = window.My;
-            window.Mx2 = window.Mx;
-            window.My = newMy;
-            window.Mx = newMx;
+
+          window.My2 = window.My;
+          window.Mx2 = window.Mx;
+          window.My = newMy;
+          window.Mx = newMx;
+          for (var y = 0; y < window.jiggleMeshH; y++) {
+            for (var x = 0; x < window.jiggleMeshW; x++) {
+              resetForce(x, y);
+            }
+          }
+
+          let aX, aY;
+          if (window.Mx && window.My && window.Mx2 && window.My2 && newMx != -999999 && window.Mx != -999999 && window.Mx2 != -999999) {
+            aX = (window.Mx2 - window.Mx) - (window.Mx - newMx);
+            aY = (window.My2 - window.My) - (window.My - newMy);
+
             for (var y = 0; y < window.jiggleMeshH; y++) {
-                for (var x = 0; x < window.jiggleMeshW; x++) {
-                    resetForce(x, y);
-                }
+              for (var x = 0; x < window.jiggleMeshW; x++) {
+                var m = window.jiggleMovement[y * window.jiggleMeshW + x];
+                window.jiggleForces[y * window.jiggleMeshW + x].x += aX * m * -50;
+                window.jiggleForces[y * window.jiggleMeshW + x].y += aY * m * 50;
+              }
             }
-      
-            if (window.Mx && window.My && window.Mx2 && window.My2 && newMx != -999999 && window.Mx != -999999 && window.Mx2 != -999999) {
-        
-                var aX = (window.Mx2 - window.Mx) - (window.Mx - newMx);
-                var aY = (window.My2 - window.My) - (window.My - newMy);
-        
-                for (var y = 0; y < window.jiggleMeshH; y++) {
-                    for (var x = 0; x < window.jiggleMeshW; x++) {
-                        var m = window.jiggleMovement[y * window.jiggleMeshW + x];
-                        window.jiggleForces[y * window.jiggleMeshW + x].x += aX * m * -50;
-                        window.jiggleForces[y * window.jiggleMeshW + x].y += aY * m * 50;
-                    }
-                }
+          }
+
+
+          for (var y = 0; y < window.jiggleMeshH; y++) {
+            for (var x = 0; x < window.jiggleMeshW; x++) {
+              if (x != 0) {
+                springUpdate(x - 1, y, x, y);
+              }
+              if (y != 0) {
+                springUpdate(x, y - 1, x, y);
+              }
             }
-        
-      
-            for (var y = 0; y < window.jiggleMeshH; y++) {
-                for (var x = 0; x < window.jiggleMeshW; x++) {
-                    if (x != 0) {
-                        springUpdate(x - 1, y, x, y);
-                    }
-                    if (y != 0) {
-                        springUpdate(x, y - 1, x, y);
-                    }
-                }
+          }
+
+
+          for (var y = 0; y < window.jiggleMeshH; y++) {
+            for (var x = 0; x < window.jiggleMeshW; x++) {
+              addDampingForce(x, y);
+              update(x, y);
             }
-        
-        
-            for (var y = 0; y < window.jiggleMeshH; y++) {
-                for (var x = 0; x < window.jiggleMeshW; x++) {
-                    addDampingForce(x, y);
-                    update(x, y);
-                }
-            }
-      
-        
-            for (var i = 0; i < window.jigglePositions.length; i++) {
-                var pos = window.jigglePositions[i];
-                vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
-                vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
-        
-                vertices2[i * 2] = vertices[i * 2];
-                vertices2[i * 2 + 1] = vertices[i * 2 + 1];
-            }
+          }
+
+
+          for (var i = 0; i < window.jigglePositions.length; i++) {
+            var pos = window.jigglePositions[i];
+            vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
+            vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
+
+            vertices2[i * 2] = vertices[i * 2];
+            vertices2[i * 2 + 1] = vertices[i * 2 + 1];
+          }
         }
         window.jiggledBaseMapMesh.geometry.buffers[0].update();
         window.jiggledDepthMapMesh.geometry.buffers[0].update();
@@ -361,6 +361,8 @@
     cursorContainer.name = 'cursorContainer';
     bmContainer.addChild(cursorContainer);
 
+    var gridGraphics = new PIXI.Graphics();
+    bmContainer.addChild(gridGraphics);
 
 
     var dmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
@@ -406,9 +408,6 @@
     app.stage.addChild(container);
 
 
-    var gridGraphics = new PIXI.Graphics();
-    gridGraphics.scale.set(1, 1);
-    bmContainer.addChild(gridGraphics);
 
     // app.stage.addChild(window.jiggledDepthMapRT);
     // app.stage.addChild(window.jiggledBaseMapRT);
@@ -1781,7 +1780,7 @@
       window.springiness = [];//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
       
 
-      var depthImg = depthMap.baseTexture.source;
+      var depthImg = depthMap.baseTexture.resource.source;
       var tempCanvas = document.createElement('canvas');
       tempCanvas.width = depthImg.width;
       tempCanvas.height = depthImg.height;
@@ -1795,7 +1794,6 @@
 
       // This is the jiggled mseh
       window.jiggledDepthMapMesh = new PIXI.SimplePlane(dmFinalSprite.texture, window.jiggleMeshW, window.jiggleMeshH);
-      window.jiggledDepthMapMesh.visible = false;
 
       // This is the render texture of the jiggled mseh
       window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMap.width, baseMap.height));
@@ -1867,25 +1865,21 @@
       }
     }
 
-
-
     function springUpdate(x1, y1, x2, y2) {
-      if (window.jiggleStaticFlags[x1 + y1 * window.jiggleMeshW.w] && !window.jiggleStaticFlags[x2 + y2 * window.jiggleMeshW.w]) 
+      let i1 = x1 + y1 * window.jiggleMeshW;
+      let i2 = x2 + y2 * window.jiggleMeshW;
+      if (window.jiggleStaticFlags[i1] && window.jiggleStaticFlags[i2]) 
           return;
 
-      var distanceOrigin = (x2 - x1) * window.gridW + (y2 - y1) * window.gridH;
+      let distanceOrigin = (x2 - x1) * window.gridW + (y2 - y1) * window.gridH;
       
-      
+      let diff = sub(window.jigglePositions[i1], window.jigglePositions[i2]);
+      let distance = len(diff);
 
-      var p1 = window.jigglePositions[y1 * window.jiggleMeshW + x1];
-      var p2 = window.jigglePositions[y2 * window.jiggleMeshW + x2];
+      let springiness = (window.springiness[i1] + window.springiness[i2]) / 2.0;
 
-      var distance = len(sub(p1, p2));
-
-      var springiness = (window.springiness[y1 * window.jiggleMeshW + x1] + window.springiness[y2 * window.jiggleMeshW + x2]) / 2;
-
-      var springForce = springiness * (distanceOrigin - distance);
-      var frcToAdd = tim(normalize(sub(p1, p2)), springForce);
+      let springForce = springiness * (distanceOrigin - distance);
+      let frcToAdd = tim(diff, 1.0 / distance * springForce);
 
       addForce(x1, y1, frcToAdd.x, frcToAdd.y);
       addForce(x2, y2, -frcToAdd.x, -frcToAdd.y);
@@ -1898,7 +1892,9 @@
 
     function normalize(v) {
       var l = len(v);
-      return { x: v.x / l, y: v.y / l };
+      v.x /= l;
+      v.y /= l;
+      return v;
     }
 
     function sub(v1, v2) {
@@ -1906,35 +1902,73 @@
     }
 
     function tim(v1, s) {
-      return { x: v1.x * s, y: v1.y * s }
+      v1.x *= s;
+      v1.y *= s;
+      return v1;
     }
 
     function renderVertices(vertices) {
+      // Drawing lines are very costly
+      // Draw minimum number of lines by combining static vertices in a row
+
       gridGraphics.clear();
-      gridGraphics.lineStyle(2, 0xffc2c2, 0.2);
+      gridGraphics.lineStyle(1, 0xffc2c2, 0.1);
 
       var w = window.jiggleMeshW;
       var h = window.jiggleMeshH;
 
-      var index = 0;
+
+      // Horizontal lines
+      let lineCount = 0;
       for (var r = 0; r < h; r++) {
-        for (var c = 0; c < w; c++) {
-          if (c === 0) {
-            gridGraphics.moveTo(vertices[index * 2], vertices[index * 2 + 1]);
+        let x = 0;
+        gridGraphics.moveTo(vertices[(r * w + x) * 2], vertices[(r * w + x) * 2 + 1]);
+
+        while (x + 1 < w) {
+          if (window.jiggleStaticFlags[r * w + x]) {
+            let x2 = x;
+            while (window.jiggleStaticFlags[r * w + x2 + 1] && x2 + 1 < w) {
+              x2++;
+            }
+            if (x2 != x) {
+              gridGraphics.lineTo(vertices[(r * w + x2) * 2], vertices[(r * w + x2) * 2 + 1]);
+              lineCount++;
+              x = x2;
+            } else {
+              x++;
+              gridGraphics.lineTo(vertices[(r * w + x) * 2], vertices[(r * w + x) * 2 + 1]);
+              lineCount++;
+            }
           } else {
-            gridGraphics.lineTo(vertices[index * 2], vertices[index * 2 + 1]);
+            x++;
+            gridGraphics.lineTo(vertices[(r * w + x) * 2], vertices[(r * w + x) * 2 + 1]);
+            lineCount++;
           }
-          index++;
         }
       }
 
-      var index = 0;
-      for (var c = 0; c < w; c++) {
-        index = c;
-        gridGraphics.moveTo(vertices[index * 2], vertices[index * 2 + 1]);
-        for (var r = 0; r < h - 1; r++) {
-          index += w;
-          gridGraphics.lineTo(vertices[index * 2], vertices[index * 2 + 1]);
+      // Vertical lines
+      for (var r = 0; r < w; r++) {
+        let y = 0;
+        gridGraphics.moveTo(vertices[(r + w * y) * 2], vertices[(r + w * y) * 2 + 1]);
+
+        while (y + 1 < h) {
+          if (window.jiggleStaticFlags[r + w * y]) {
+            let y2 = y;
+            while (window.jiggleStaticFlags[r + w * y2 + w] && y2 + 1 < h) {
+              y2++;
+            }
+            if (y2 != y) {
+              gridGraphics.lineTo(vertices[(r + w * y2) * 2], vertices[(r + w * y2) * 2 + 1]);
+              y = y2;
+            } else {
+              y++;
+              gridGraphics.lineTo(vertices[(r + w * y) * 2], vertices[(r + w * y) * 2 + 1]);
+            }
+          } else {
+            y++;
+            gridGraphics.lineTo(vertices[(r + w * y) * 2], vertices[(r + w * y) * 2 + 1]);
+          }
         }
       }
     }
