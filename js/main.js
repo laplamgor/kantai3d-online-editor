@@ -109,6 +109,9 @@
 
     let mm2Texture = PIXI.Texture.EMPTY;
 
+    let blueTexture = PIXI.Texture.EMPTY;
+
+
     let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm1Sprite.name = 'dm1Sprite';
 
@@ -118,6 +121,8 @@
     let mm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     mm2Sprite.name = 'mm2Sprite';
 
+    let blueSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    blueSprite.name = 'blueSprite';
 
     let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     maskSprite.name = 'maskSprite';
@@ -149,6 +154,10 @@
 
       mm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       mm2Sprite.texture = mm2Texture;
+      
+      blueTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      blueSprite.texture = blueTexture;
+
 
       window.displacementFilter.uniforms.displacementMap = dmFinalSprite.texture;
       window.offsetFilter.uniforms.displacementMap = dm2Texture;
@@ -380,6 +389,11 @@
     let mm2Container = new PIXI.Container();
     mm2Container.name = 'mm2Container';
     mm2Container.addChild(mm2Sprite);
+    
+    let blueContainer = new PIXI.Container();
+    blueContainer.name = 'blueContainer';
+    blueContainer.addChild(blueSprite);
+
 
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
@@ -392,14 +406,19 @@
     let maskCacheContainer = new PIXI.Container();
     maskCacheContainer.name = 'maskCacheContainer';
 
+    let jiggleCacheContainer = new PIXI.Container();
+    jiggleCacheContainer.name = 'jiggleCacheContainer';
+
     app.stage.addChild(depthCacheContainer);
     app.stage.addChild(maskCacheContainer);
+    app.stage.addChild(jiggleCacheContainer);
 
     app.stage.addChild(maskContainer);
 
     app.stage.addChild(dmFinalSprite);
     app.stage.addChild(bmFinalSprite);
     app.stage.addChild(mm2Container);
+    app.stage.addChild(blueContainer);
     app.stage.addChild(bmContainer);
     app.stage.addChild(dm2Container);
 
@@ -735,6 +754,7 @@
       for (let k = 0; k < invalidCacheSnapshots.length; k++) {
         invalidCacheSnapshots[k].dm.destroy(true);
         invalidCacheSnapshots[k].mm.destroy(true);
+        invalidCacheSnapshots[k].jm.destroy(true);
       }
       cacheSnapshots = cacheSnapshots.filter(e => e.step <= strokes.length - 1);
 
@@ -793,15 +813,24 @@
       maskCacheSprite.name = 'maskCacheSprite-' + stepNum;
       maskCacheContainer.addChild(maskCacheSprite);
 
+
+      let currentJiggleRenderTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      var jiggleCacheSprite = new PIXI.Sprite(currentJiggleRenderTexture);
+      jiggleCacheSprite.name = 'jiggleCacheSprite-' + stepNum;
+      jiggleCacheContainer.addChild(jiggleCacheSprite);
+
+
       if (strokes.length == 0) {
         app.renderer.render(dm1Sprite, currentDepthRenderTexture);
         app.renderer.render(dm1Sprite, currentMaskRenderTexture);
+        app.renderer.render(dm1Sprite, currentJiggleRenderTexture);
       } else {
         app.renderer.render(dm2Container, currentDepthRenderTexture);
         app.renderer.render(mm2Container, currentMaskRenderTexture);
+        app.renderer.render(blueContainer, currentJiggleRenderTexture);
       }
 
-      cacheSnapshots.push({ step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite });
+      cacheSnapshots.push({ step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite , jm: jiggleCacheSprite });
       let j = 0; // j is the position of the previous cached object. must older than current position
       for (let k = 1; k < cacheSnapshots.length; k++) {
         let c = cacheSnapshots[k];
@@ -809,6 +838,7 @@
           cacheSnapshots = cacheSnapshots.filter(e => e !== c); // delete this cache
           c.dm.destroy(true);
           c.mm.destroy(true);
+          c.jm.destroy(true);
           break; // for each new step, it will at most delete one old cache
         } else {
           j = c.step;
@@ -817,16 +847,23 @@
 
       app.renderer.render(depthCacheSprite, dm2Texture);
       app.renderer.render(maskCacheSprite, mm2Texture);
+      app.renderer.render(jiggleCacheSprite, blueTexture);
 
       // remove all children
       while (dm2Container.children[0]) {
         dm2Container.removeChild(dm2Container.children[0]);
       }
       dm2Container.addChild(dm2Sprite);
+
       while (mm2Container.children[0]) {
         mm2Container.removeChild(mm2Container.children[0]);
       }
       mm2Container.addChild(mm2Sprite);
+      
+      while (blueContainer.children[0]) {
+        blueContainer.removeChild(blueContainer.children[0]);
+      }
+      blueContainer.addChild(blueSprite);
     }
 
 
@@ -859,6 +896,7 @@
       }
       app.renderer.render(cached.dm, dm2Texture);
       app.renderer.render(cached.mm, mm2Texture);
+      app.renderer.render(cached.jm, blueTexture);
 
       if (strokes.length > 0) {
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
@@ -1316,8 +1354,11 @@
 
     let isMaskEditing = false;
     let maskEditingId = 0;
-
     let isMaskIndicatorOn = true;
+
+    let isJiggleEditingMode = true;
+    
+
 
     function updateMaskIndicator() {
       // Redraw the basemap
@@ -1382,6 +1423,29 @@
             tmdd[i + 2] = 0;
             tmdd[i + 3] = 128;
           }
+        }
+        tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
+        bm2Ctx.drawImage(tempCanvas, 0, 0);
+      } else if (isJiggleEditingMode) {
+
+        let dmTempCanvas = app.renderer.extract.canvas(blueContainer);
+        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmdd = dmImageData.data;
+
+        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+        let tmCtx = tempCanvas.getContext('2d');
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
+        let tmdd = tmImageData.data;
+
+        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+        for (let i = 0; i < dmdd.length; i += 4) {
+          // half transparent red on the masked area. invisible on the editable area
+          // Blue color is the jiggle strength
+          tmdd[i] = dmdd[i + 2];
+          tmdd[i + 1] = 0;
+          tmdd[i + 2] = 255 - dmdd[i + 2];
+          tmdd[i + 3] = dmdd[i + 2];
         }
         tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
@@ -1608,6 +1672,7 @@
               for (let k = 0; k < cacheSnapshots.length; k++) {
                 cacheSnapshots[k].dm.destroy(true);
                 cacheSnapshots[k].mm.destroy(true);
+                cacheSnapshots[k].jm.destroy(true);
               }
               cacheSnapshots = [];
 
@@ -1646,6 +1711,7 @@
               for (let k = 0; k < cacheSnapshots.length; k++) {
                 cacheSnapshots[k].dm.destroy(true);
                 cacheSnapshots[k].mm.destroy(true);
+                cacheSnapshots[k].jm.destroy(true);
               }
               cacheSnapshots = [];
             }
@@ -1776,8 +1842,8 @@
       window.jiggleStaticFlags = [];
       window.jiggleMovement = [];
 
-      window.damping = [];//1.0 / 8; // 1 2 4 8 16 
-      window.springiness = [];//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+      window.damping = []; //1.0 / 8; // 1 2 4 8 16 
+      window.springiness = []; //1.0 / 16.0; // 0 2 4 8 16 32 回彈力
       
 
       var depthImg = depthMap.baseTexture.resource.source;
