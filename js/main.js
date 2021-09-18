@@ -793,8 +793,11 @@
     }
 
     function endDrawing() {
-      isDrawing = false;
       updateCache();
+      if (isDrawing) {
+        resetJiggleMovementFromDepth(dm2Texture);
+      }
+      isDrawing = false;
       if (isMaskEditing) {
         refreshMaskListPanel();
       }
@@ -806,8 +809,7 @@
         jiggleCacheContainer.addChild(jiggleCacheSprite);
         app.renderer.render(blueContainer, currentJiggleRenderTexture);
   
-        resetJiggleStrength( currentJiggleRenderTexture);
-  
+        resetJiggleStrength(currentJiggleRenderTexture);
       }
     }
 
@@ -815,6 +817,7 @@
 
     let cacheSnapshots = [];
 
+    
     function updateCache() {
       let stepNum = strokes.length;
 
@@ -2029,6 +2032,25 @@
         }
       }
       
+      window.Mx = null;
+      window.My = null;
+      window.Mx2 = null;
+      window.My2 = null;
+    }
+
+    
+    function resetJiggleMovementFromDepth(depthMapTexture) {
+      console.log('resetJiggleMovementFromDepth');
+      let dmData = extractPixelsWithoutPostmultiply(depthMapTexture);
+
+      window.jiggleMovement = [];
+      for (var y = 0; y < window.jiggleMeshH; y++) {
+        for (var x = 0; x < window.jiggleMeshW; x++) {
+          var r = dmData[(Math.floor(y * window.gridH) * depthMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
+          window.jiggleMovement.push((r - 127.0) / 128.0);
+        }
+      }
+
       window.Mx = null;
       window.My = null;
       window.Mx2 = null;
