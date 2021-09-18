@@ -1655,11 +1655,12 @@
 
       let dmData = extractPixelsWithoutPostmultiply(dm2Container);
       let mmDate = extractPixelsWithoutPostmultiply(mm2Container);
+      let jmDate = extractPixelsWithoutPostmultiply(blueContainer);
 
       for (var i = 0; i < tmdd.length; i += 4) {
         tmdd[i + 0] = dmData[i + 0]; // the depth data
         tmdd[i + 1] = mmDate[i + 1]; // the mask ID data
-        tmdd[i + 2] = 0; // reserved only. currently not used.
+        tmdd[i + 2] = jmDate[i + 2]; // reserved only. currently not used.
         tmdd[i + 3] = 255; // reserved only. currently always full
       }
       tmCtx.putImageData(tmImageData, 0, 0);
