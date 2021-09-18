@@ -1476,7 +1476,7 @@
           tmdd[i] = dmdd[i + 2];
           tmdd[i + 1] = 255 - dmdd[i + 2];
           tmdd[i + 2] = 0;
-          tmdd[i + 3] = dmdd[i + 2];
+          tmdd[i + 3] = dmdd[i + 2] == 0 ? 0 : 128;
         }
         tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
@@ -1705,10 +1705,14 @@
 
     
     document.getElementById('top-switcher').addEventListener("show", function (e) {
+      let old = isJiggleEditing;
       isJiggleEditing = e.detail[0].index() == 3;
+      if (old != isJiggleEditing) {
+        updateJiggleIndicator();
+      }
       // TODO: add this logic to auto finish mask editing when switch tab
       // isMaskEditing = isMaskEditing && e.detail[0].index() == 2;
-      updateMaskIndicator();
+      // updateMaskIndicator();
     });
 
 
