@@ -172,23 +172,6 @@
         </ul>
 
 
-        <script>
-          var slider = $('.range-slider'),
-            range = $('.range-slider'),
-            value = $('.range-slider-val');
-
-          slider.each(function () {
-
-            value.each(function () {
-              var value = $(this).prev().attr('value');
-              $(this).html(value);
-            });
-
-            range.on('input', function () {
-              $(this).next(value).html(this.value);
-            });
-          });
-        </script>
       </li>
 
       <!-- Mask page -->
@@ -226,11 +209,46 @@
       <!-- Jiggle page -->
       <li>
         <div>
+          <form id="jiggle-form">
+            Brush Size
+            <div class="range-slider">
+              <input class="range-slider uk-range brush-inner-radius-slider" type="range" value="10" min="1"
+                max="200">
+              <span class="range-slider-val brush-inner-radius-slider-val">0</span>
+            </div>
+
+            Jiggle Strength Value
+            <div class="range-slider">
+              <input class="range-slider uk-range" id="jiggle-value-slider" type="range" value="127" min="0"
+                max="255">
+              <span class="jiggle-slider-val">128</span>
+            </div>
+
+          </form>
+
           <p>This page is coming soon.</p>
           <p>You may adjust the strength of jiggle effect.</p>
 
         </div>
       </li>
+
+      <script>
+        var slider = $('.range-slider'),
+          range = $('.range-slider'),
+          value = $('.range-slider-val');
+
+        slider.each(function () {
+
+          value.each(function () {
+            var value = $(this).prev().attr('value');
+            $(this).html(value);
+          });
+
+          range.on('input', function () {
+            $(this).next(value).html(this.value);
+          });
+        });
+      </script>
 
       <!-- History page -->
       <li>
