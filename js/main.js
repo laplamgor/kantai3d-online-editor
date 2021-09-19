@@ -1639,10 +1639,7 @@
       brushFilter.brushPos = { 0: graphics.filterArea.x, 1: graphics.filterArea.y };
       brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.width))), 1: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.height))) };
       brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
-      brushFilter.maskIds = Array(256).fill(0);
-      for (let i = 0; i < 256; i++) {
-        brushFilter.maskIds[i] = stroke.mask[i];
-      }
+      brushFilter.maskIds = Array(256).fill(1); // Jiggle map don't care about mask
 
       blueContainer.addChild(stroke.lineContainer);
     }
