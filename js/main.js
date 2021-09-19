@@ -109,6 +109,9 @@
 
     let mm2Texture = PIXI.Texture.EMPTY;
 
+    let blueTexture = PIXI.Texture.EMPTY;
+
+
     let dm1Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     dm1Sprite.name = 'dm1Sprite';
 
@@ -118,6 +121,8 @@
     let mm2Sprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     mm2Sprite.name = 'mm2Sprite';
 
+    let blueSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
+    blueSprite.name = 'blueSprite';
 
     let maskSprite = new PIXI.Sprite.from(PIXI.Texture.EMPTY);
     maskSprite.name = 'maskSprite';
@@ -149,6 +154,10 @@
 
       mm2Texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       mm2Sprite.texture = mm2Texture;
+      
+      blueTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      blueSprite.texture = blueTexture;
+
 
       window.displacementFilter.uniforms.displacementMap = dmFinalSprite.texture;
       window.offsetFilter.uniforms.displacementMap = dm2Texture;
@@ -165,13 +174,13 @@
 
 
       // This is the render texture of the jiggled mseh
-      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(bm3Texture.width, bm3Texture.height));
+      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(dmImage.width, dmImage.height));
       window.jiggledDepthMapRT.visible = false;
       app.stage.addChild(window.jiggledDepthMapRT);
 
       window.mousex1 = null;
       window.mousey1 = null;
-      prepareJiggle(dm1Texture, dm1Texture);
+      prepareJiggle(dm1Texture, dm1Texture, dm1Texture);
       window.displacementFilter.uniforms.displacementMap = window.jiggledDepthMapRT.texture;
 
       window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
@@ -380,6 +389,11 @@
     let mm2Container = new PIXI.Container();
     mm2Container.name = 'mm2Container';
     mm2Container.addChild(mm2Sprite);
+    
+    let blueContainer = new PIXI.Container();
+    blueContainer.name = 'blueContainer';
+    blueContainer.addChild(blueSprite);
+
 
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
@@ -392,14 +406,19 @@
     let maskCacheContainer = new PIXI.Container();
     maskCacheContainer.name = 'maskCacheContainer';
 
+    let jiggleCacheContainer = new PIXI.Container();
+    jiggleCacheContainer.name = 'jiggleCacheContainer';
+
     app.stage.addChild(depthCacheContainer);
     app.stage.addChild(maskCacheContainer);
+    app.stage.addChild(jiggleCacheContainer);
 
     app.stage.addChild(maskContainer);
 
     app.stage.addChild(dmFinalSprite);
     app.stage.addChild(bmFinalSprite);
     app.stage.addChild(mm2Container);
+    app.stage.addChild(blueContainer);
     app.stage.addChild(bmContainer);
     app.stage.addChild(dm2Container);
 
@@ -735,6 +754,7 @@
       for (let k = 0; k < invalidCacheSnapshots.length; k++) {
         invalidCacheSnapshots[k].dm.destroy(true);
         invalidCacheSnapshots[k].mm.destroy(true);
+        invalidCacheSnapshots[k].jm.destroy(true);
       }
       cacheSnapshots = cacheSnapshots.filter(e => e.step <= strokes.length - 1);
 
@@ -744,6 +764,10 @@
         strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
         strokes[strokes.length - 1].value = maskEditingId;
         strokes[strokes.length - 1].isMaskEditing = true;
+      } else if (isJiggleEditing) {
+        strokes[strokes.length - 1].r1 = parseInt(brushSizeSliders[0].value);
+        strokes[strokes.length - 1].value = parseInt(document.getElementById('jiggle-value-slider').value);
+        strokes[strokes.length - 1].isJiggleEditing = true;
       } else {
         switch (brushId) {
           default:
@@ -769,10 +793,23 @@
     }
 
     function endDrawing() {
-      isDrawing = false;
       updateCache();
+      if (isDrawing) {
+        resetJiggleMovementFromDepth(dm2Texture);
+      }
+      isDrawing = false;
       if (isMaskEditing) {
         refreshMaskListPanel();
+      }
+      if (isJiggleEditing) {
+
+      
+        let currentJiggleRenderTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+        var jiggleCacheSprite = new PIXI.Sprite(currentJiggleRenderTexture);
+        jiggleCacheContainer.addChild(jiggleCacheSprite);
+        app.renderer.render(blueContainer, currentJiggleRenderTexture);
+  
+        resetJiggleStrength(currentJiggleRenderTexture);
       }
     }
 
@@ -780,6 +817,7 @@
 
     let cacheSnapshots = [];
 
+    
     function updateCache() {
       let stepNum = strokes.length;
 
@@ -793,15 +831,24 @@
       maskCacheSprite.name = 'maskCacheSprite-' + stepNum;
       maskCacheContainer.addChild(maskCacheSprite);
 
+
+      let currentJiggleRenderTexture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      var jiggleCacheSprite = new PIXI.Sprite(currentJiggleRenderTexture);
+      jiggleCacheSprite.name = 'jiggleCacheSprite-' + stepNum;
+      jiggleCacheContainer.addChild(jiggleCacheSprite);
+
+
       if (strokes.length == 0) {
         app.renderer.render(dm1Sprite, currentDepthRenderTexture);
         app.renderer.render(dm1Sprite, currentMaskRenderTexture);
+        app.renderer.render(dm1Sprite, currentJiggleRenderTexture);
       } else {
         app.renderer.render(dm2Container, currentDepthRenderTexture);
         app.renderer.render(mm2Container, currentMaskRenderTexture);
+        app.renderer.render(blueContainer, currentJiggleRenderTexture);
       }
 
-      cacheSnapshots.push({ step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite });
+      cacheSnapshots.push({ step: stepNum, dm: depthCacheSprite, mm: maskCacheSprite , jm: jiggleCacheSprite });
       let j = 0; // j is the position of the previous cached object. must older than current position
       for (let k = 1; k < cacheSnapshots.length; k++) {
         let c = cacheSnapshots[k];
@@ -809,6 +856,7 @@
           cacheSnapshots = cacheSnapshots.filter(e => e !== c); // delete this cache
           c.dm.destroy(true);
           c.mm.destroy(true);
+          c.jm.destroy(true);
           break; // for each new step, it will at most delete one old cache
         } else {
           j = c.step;
@@ -817,16 +865,23 @@
 
       app.renderer.render(depthCacheSprite, dm2Texture);
       app.renderer.render(maskCacheSprite, mm2Texture);
+      app.renderer.render(jiggleCacheSprite, blueTexture);
 
       // remove all children
       while (dm2Container.children[0]) {
         dm2Container.removeChild(dm2Container.children[0]);
       }
       dm2Container.addChild(dm2Sprite);
+
       while (mm2Container.children[0]) {
         mm2Container.removeChild(mm2Container.children[0]);
       }
       mm2Container.addChild(mm2Sprite);
+      
+      while (blueContainer.children[0]) {
+        blueContainer.removeChild(blueContainer.children[0]);
+      }
+      blueContainer.addChild(blueSprite);
     }
 
 
@@ -859,6 +914,7 @@
       }
       app.renderer.render(cached.dm, dm2Texture);
       app.renderer.render(cached.mm, mm2Texture);
+      app.renderer.render(cached.jm, blueTexture);
 
       if (strokes.length > 0) {
         strokes[strokes.length - 1].mask = getCurrentMaskSelected();
@@ -878,10 +934,14 @@
 
       // Draw all uncached steps
       let maskUpdated = false;
+      let jiggleUpdated = false;
       for (let i = cached.step; i < strokes.length; i++) {
         if (strokes[i].isMaskEditing) {
           drawMaskLine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value)
           maskUpdated = true;
+        } else if (strokes[i].isJiggleEditing) {
+          drawJiggleine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value);
+          jiggleUpdated = true;
         } else {
           switch (strokes[i].brushId) {
             default:
@@ -900,6 +960,10 @@
 
       if (maskUpdated) {
         updateMaskIndicator();
+      }
+
+      if (jiggleUpdated) {
+        updateJiggleIndicator();
       }
     }
 
@@ -1316,8 +1380,11 @@
 
     let isMaskEditing = false;
     let maskEditingId = 0;
-
     let isMaskIndicatorOn = true;
+
+    let isJiggleEditing = false;
+    
+
 
     function updateMaskIndicator() {
       // Redraw the basemap
@@ -1386,8 +1453,37 @@
         tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
         bm2Ctx.drawImage(tempCanvas, 0, 0);
       }
-
       bm3Texture.update();
+    }
+
+    function updateJiggleIndicator() {
+      
+      bm2Ctx = bm2Canvas.getContext('2d');
+      bm2Ctx.clearRect(0, 0, bmImage.width, bmImage.height);
+      bm2Ctx.drawImage(bmImage, 0, 0);
+      if (isJiggleEditing && isMaskIndicatorOn) {
+        let dmTempCanvas = app.renderer.extract.canvas(blueContainer);
+        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
+        let dmdd = dmImageData.data;
+
+        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
+        let tmCtx = tempCanvas.getContext('2d');
+        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
+        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
+        let tmdd = tmImageData.data;
+
+        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
+        for (let i = 0; i < dmdd.length; i += 4) {
+          // half transparent red on the masked area. invisible on the editable area
+          // Blue color is the jiggle strength
+          tmdd[i] = dmdd[i + 2];
+          tmdd[i + 1] = 255 - dmdd[i + 2];
+          tmdd[i + 2] = 0;
+          tmdd[i + 3] = dmdd[i + 2] == 0 ? 0 : 128;
+        }
+        tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
+        bm2Ctx.drawImage(tempCanvas, 0, 0);
+      }
     }
 
     function drawMaskLine2(stroke, path, radius, depth, maskid) {
@@ -1469,6 +1565,84 @@
 
       mm2Container.addChild(stroke.lineContainer);
     }
+    
+
+    function drawJiggleine2(stroke, path, radius, depth) {
+      if (stroke.lines) {
+        for (let index = 0; index < stroke.lines.length; ++index) {
+          stroke.lines[index].destroy(true);
+        }
+        stroke.lineContainer.destroy(true);
+      }
+      stroke.lineContainer = new PIXI.Container();
+      stroke.lineContainer.name = 'line(jiggle)';
+      stroke.lines = [];
+
+
+
+      const graphics = new PIXI.Graphics();
+
+      let brushFilter;
+      brushFilter = new BrushFilter();
+      brushFilter.maskMap = mm2Sprite.texture;
+      brushFilter.alpha = 1; // roller mode
+      graphics.filters = [brushFilter];
+
+      if (path.length == 1) {
+        // Single point only, cannot use path
+        const circle = graphics.lineStyle({
+          width: 0, alignment: 0.5
+        }).beginFill(depth << 8 + 0).drawCircle(path[0].x - 0.5, path[0].y - 0.5, radius - 0.5).endFill();
+        circle.name = 'circle a:' + 1 + ' r:' + radius;
+      } else {
+        // Multi points line
+        const pixiLine = graphics.lineStyle({
+          width: radius * 2. - 1.,
+          color: depth << 0, // Red channel 8bit to RGB 32bit: no bitwise change
+          alignment: 0.5,
+          join: 'round',
+          cap: 'round'
+        }).moveTo(path[0].x - 0.5, path[0].y - 0.5);
+        pixiLine.name = 'flatLine a:' + 1 + ' r:' + radius;
+
+        
+        let point3;
+        let point2;
+        let point1;
+        for (let index = 0; index < path.length; ++index) {
+          let point = path[index];
+          if ((point3 && point.x == point3.x && point.y == point3.y)
+           || (point2 && point.x == point2.x && point.y == point2.y)
+           || (point1 && point.x == point1.x && point.y == point1.y)) {
+            // pixi has bug when drawing line when position n is same as n+2
+            // https://github.com/pixijs/pixijs/issues/5006
+            // skip this position
+          } else {
+            pixiLine.lineTo(point.x - 0.5, point.y - 0.5);
+            point3 = point2;
+            point2 = point1;
+            point1 = point;
+          }
+        }
+      }
+
+
+      stroke.lines.push(graphics);
+      stroke.lineContainer.addChild(graphics);
+
+      let bounds = stroke.lineContainer.getBounds();
+      graphics.filterArea = bounds.clone();
+      graphics.filterArea.x = Math.max(graphics.filterArea.x, 0.0);
+      graphics.filterArea.y = Math.max(graphics.filterArea.y, 0.0);
+      graphics.filterArea.width = Math.min(graphics.filterArea.width + bounds.x - graphics.filterArea.x, bmImage.width - graphics.filterArea.x);
+      graphics.filterArea.height = Math.min(graphics.filterArea.height + bounds.y - graphics.filterArea.y, bmImage.height - graphics.filterArea.y);
+      brushFilter.brushPos = { 0: graphics.filterArea.x, 1: graphics.filterArea.y };
+      brushFilter.brushSize = { 0: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.width))), 1: Math.pow(2, Math.ceil(Math.log2(graphics.filterArea.height))) };
+      brushFilter.canvasSize = { 0: bmImage.width, 1: bmImage.height };
+      brushFilter.maskIds = Array(256).fill(1); // Jiggle map don't care about mask
+
+      blueContainer.addChild(stroke.lineContainer);
+    }
 
     function createDownloadCanvas() {
       let tempCanvas = document.createElement('canvas');
@@ -1481,11 +1655,12 @@
 
       let dmData = extractPixelsWithoutPostmultiply(dm2Container);
       let mmDate = extractPixelsWithoutPostmultiply(mm2Container);
+      let jmDate = extractPixelsWithoutPostmultiply(blueContainer);
 
       for (var i = 0; i < tmdd.length; i += 4) {
         tmdd[i + 0] = dmData[i + 0]; // the depth data
         tmdd[i + 1] = mmDate[i + 1]; // the mask ID data
-        tmdd[i + 2] = 0; // reserved only. currently not used.
+        tmdd[i + 2] = jmDate[i + 2]; // reserved only. currently not used.
         tmdd[i + 3] = 255; // reserved only. currently always full
       }
       tmCtx.putImageData(tmImageData, 0, 0);
@@ -1527,6 +1702,18 @@
       link.href = createDownloadCanvas().toDataURL('image/png');
       link.click();
       link.delete;
+    });
+
+    
+    document.getElementById('top-switcher').addEventListener("show", function (e) {
+      let old = isJiggleEditing;
+      isJiggleEditing = e.detail[0].index() == 3;
+      if (old != isJiggleEditing) {
+        updateJiggleIndicator();
+      }
+      // TODO: add this logic to auto finish mask editing when switch tab
+      // isMaskEditing = isMaskEditing && e.detail[0].index() == 2;
+      // updateMaskIndicator();
     });
 
 
@@ -1608,6 +1795,7 @@
               for (let k = 0; k < cacheSnapshots.length; k++) {
                 cacheSnapshots[k].dm.destroy(true);
                 cacheSnapshots[k].mm.destroy(true);
+                cacheSnapshots[k].jm.destroy(true);
               }
               cacheSnapshots = [];
 
@@ -1646,6 +1834,7 @@
               for (let k = 0; k < cacheSnapshots.length; k++) {
                 cacheSnapshots[k].dm.destroy(true);
                 cacheSnapshots[k].mm.destroy(true);
+                cacheSnapshots[k].jm.destroy(true);
               }
               cacheSnapshots = [];
             }
@@ -1674,6 +1863,7 @@
         // Toggle the mask indicator, just like in Photoshop
         isMaskIndicatorOn = !isMaskIndicatorOn;
         updateMaskIndicator();
+        updateJiggleIndicator();
       } else if (key.key === '1') {
         window.displacementFilter.uniforms.displayMode = 0;
       } else if (key.key === '2') {
@@ -1767,7 +1957,7 @@
 
 
     //// Jiggle related
-    function prepareJiggle(baseMap, depthMap) {
+    function prepareJiggle(baseMapTexture, DepthMapTexture, JiggleMapTexture) {
 
       window.jigglePositions = [];
       window.jiggleVelocities = [];
@@ -1776,29 +1966,40 @@
       window.jiggleStaticFlags = [];
       window.jiggleMovement = [];
 
-      window.damping = [];//1.0 / 8; // 1 2 4 8 16 
-      window.springiness = [];//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+      window.damping = [];
+      window.springiness = [];
       
-
-      var depthImg = depthMap.baseTexture.resource.source;
+     
+      // the jiggle map is loaded from image resource, we can directly get the img data using a virtual canvas
+      var depthImg = JiggleMapTexture.baseTexture.resource.source;
       var tempCanvas = document.createElement('canvas');
       tempCanvas.width = depthImg.width;
       tempCanvas.height = depthImg.height;
       let tmCtx = tempCanvas.getContext('2d');
       tmCtx.drawImage(depthImg, 0, 0);
-      var dmData = tmCtx.getImageData(0, 0, depthImg.width, depthImg.height).data;
+      let jmData = tmCtx.getImageData(0, 0, depthImg.width, depthImg.height).data;
 
 
-      window.jiggleMeshW = Math.ceil(baseMap.width / 10.0);
-      window.jiggleMeshH = Math.ceil(baseMap.height / 10.0);
+      // the jiggle map is loaded from image resource, we can directly get the img data using a virtual canvas
+      var depthImg = DepthMapTexture.baseTexture.resource.source;
+      var tempCanvas = document.createElement('canvas');
+      tempCanvas.width = depthImg.width;
+      tempCanvas.height = depthImg.height;
+      tmCtx = tempCanvas.getContext('2d');
+      tmCtx.drawImage(depthImg, 0, 0);
+      let dmData = tmCtx.getImageData(0, 0, depthImg.width, depthImg.height).data;
+
+
+      window.jiggleMeshW = Math.ceil(baseMapTexture.width / 10.0);
+      window.jiggleMeshH = Math.ceil(baseMapTexture.height / 10.0);
 
       // This is the jiggled mseh
       window.jiggledDepthMapMesh = new PIXI.SimplePlane(dmFinalSprite.texture, window.jiggleMeshW, window.jiggleMeshH);
 
       // This is the render texture of the jiggled mseh
-      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMap.width, baseMap.height));
+      window.jiggledDepthMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMapTexture.width, baseMapTexture.height));
       window.jiggledDepthMapRT.visible = false;
-      window.jiggledBaseMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMap.width, baseMap.height));
+      window.jiggledBaseMapRT = new PIXI.Sprite(PIXI.RenderTexture.create(baseMapTexture.width, baseMapTexture.height));
       window.jiggledBaseMapRT.visible = false;
 
       
@@ -1809,16 +2010,16 @@
       app.stage.addChild(window.jiggledBaseMapMesh);
       app.stage.addChild(window.jiggledBaseMapRT);
       
-      window.gridW = baseMap.width / (window.jiggleMeshW - 1.0);
-      window.gridH = baseMap.height / (window.jiggleMeshH - 1.0);
+      window.gridW = baseMapTexture.width / (window.jiggleMeshW - 1.0);
+      window.gridH = baseMapTexture.height / (window.jiggleMeshH - 1.0);
       for (var y = 0; y < window.jiggleMeshH; y++) {
         for (var x = 0; x < window.jiggleMeshW; x++) {
           window.jigglePositions.push({ x: window.gridW * x, y: y * window.gridH });
           window.jiggleVelocities.push({ x: 0, y: 0 });
           window.jiggleForces.push({ x: 0, y: 0 });
 
-          var r = dmData[(Math.floor(y * window.gridH) * baseMap.width + Math.floor(x * window.gridW)) * 4 + 0];
-          var b = dmData[(Math.floor(y * window.gridH) * baseMap.width + Math.floor(x * window.gridW)) * 4 + 2];
+          var r = dmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
+          var b = jmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
 
           window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));//1.0 / 8; // 1 2 4 8 16 
           window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
@@ -1833,6 +2034,50 @@
       window.Mx2 = null;
       window.My2 = null;
     }
+
+    
+    function resetJiggleMovementFromDepth(depthMapTexture) {
+      console.log('resetJiggleMovementFromDepth');
+      let dmData = extractPixelsWithoutPostmultiply(depthMapTexture);
+
+      window.jiggleMovement = [];
+      for (var y = 0; y < window.jiggleMeshH; y++) {
+        for (var x = 0; x < window.jiggleMeshW; x++) {
+          var r = dmData[(Math.floor(y * window.gridH) * depthMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
+          window.jiggleMovement.push((r - 127.0) / 128.0);
+        }
+      }
+
+      window.Mx = null;
+      window.My = null;
+      window.Mx2 = null;
+      window.My2 = null;
+    }
+
+    function resetJiggleStrength(JiggleMapTexture) {
+      console.log('resetJiggleStrength');
+      let jmData = extractPixelsWithoutPostmultiply(JiggleMapTexture);
+
+      window.jiggleStaticFlags = [];
+      window.damping = [];
+      window.springiness = [];
+      for (var y = 0; y < window.jiggleMeshH; y++) {
+        for (var x = 0; x < window.jiggleMeshW; x++) {
+          var b = jmData[(Math.floor(y * window.gridH) * JiggleMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
+
+          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));//1.0 / 8; // 1 2 4 8 16 
+          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+          window.jiggleStaticFlags.push(b == 0);
+        }
+      }
+
+
+      window.Mx = null;
+      window.My = null;
+      window.Mx2 = null;
+      window.My2 = null;
+    }
+
 
     function resetForce(x, y) {
       window.jiggleForces[y * window.jiggleMeshW + x] = { x: 0, y: 0 };
