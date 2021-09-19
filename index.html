@@ -42,7 +42,7 @@
       uk-switcher="connect: #top-switcher" uk-sticky="offset: 0" uk-tab>
       <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="File (q)"><i
             class="material-icons icon-align">photo_library</i></a></li>
-      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Paint (w)"><i
+      <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Paint depth map (w)"><i
             class="material-icons icon-align">edit</i></a></li>
       <li class="uk-padding-remove uk-margin-top"><a uk-tooltip="Masks (e)"><i
             class="material-icons icon-align">layers</i></a></li>
@@ -231,24 +231,6 @@
         </div>
       </li>
 
-      <script>
-        var slider = $('.range-slider'),
-          range = $('.range-slider'),
-          value = $('.range-slider-val');
-
-        slider.each(function () {
-
-          value.each(function () {
-            var value = $(this).prev().attr('value');
-            $(this).html(value);
-          });
-
-          range.on('input', function () {
-            $(this).next(value).html(this.value);
-          });
-        });
-      </script>
-
       <!-- History page -->
       <li>
         <div>
@@ -313,7 +295,7 @@
                 class="uk-icon-button" uk-icon="github"></a>
             </div>
 
-            <p>Last update: 2021-07-26</p>
+            <p>Last update: 2021-09-19</p>
           </div>
 
           <p>© 2021 laplamgor. </p>
@@ -338,6 +320,26 @@
       </p>
     </div>
   </div>
+
+  
+
+  <script>
+    var slider = $('.range-slider'),
+      range = $('.range-slider'),
+      value = $('.range-slider-val');
+
+    slider.each(function () {
+
+      value.each(function () {
+        var value = $(this).prev().attr('value');
+        $(this).html(value);
+      });
+
+      range.on('input', function () {
+        $(this).next(value).html(this.value);
+      });
+    });
+  </script>
 
   <script src="js/main.js"></script>
 
