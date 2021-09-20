@@ -145,6 +145,7 @@
 
       bmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       dmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      jmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
 
 
       dm1Sprite.texture = dm1Texture; // original opened depth map
@@ -159,11 +160,14 @@
       blueSprite.texture = blueTexture;
 
 
+      window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
+      window.offsetFilter.uniforms.baseMap = bm3Texture;
+
       window.displacementFilter.uniforms.displacementMap = dmFinalSprite.texture;
       window.offsetFilter.uniforms.displacementMap = dm2Texture;
 
-      window.displacementFilter.uniforms.baseMap = bmFinalSprite.texture;
-      window.offsetFilter.uniforms.baseMap = bm3Texture;
+      window.displacementFilter.uniforms.jiggleMap = jmFinalSprite.texture;
+      window.offsetFilter.uniforms.jiggleMap = dm2Texture; // Not used for offsetFilter
 
 
       window.jiggleMeshW = Math.ceil(dmImage.width / 10.0);
@@ -291,11 +295,11 @@
         app.renderer.render(jiggledBaseMapMesh, window.jiggledBaseMapRT.texture);
         window.jiggledBaseMapMesh.visible = false;
         window.displacementFilter.uniforms.baseMap = window.jiggledBaseMapRT.texture;
+
       }
-      ////////
+        window.displacementFilter.uniforms.jiggleMap = jmFinalSprite.texture;
     
-    
-    
+        window.displacementFilter.uniforms.jiggleMapMode = isJiggleEditing ? 1 : 0;
 
       // draw the filter...
       filterManager.applyFilter(this, input, output);
@@ -394,6 +398,9 @@
     blueContainer.name = 'blueContainer';
     blueContainer.addChild(blueSprite);
 
+    var jmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
+    jmFinalSprite.name = 'jmFinalSprite';
+
 
     let maskContainer = new PIXI.Container();
     maskContainer.name = 'maskContainer';
@@ -417,6 +424,7 @@
 
     app.stage.addChild(dmFinalSprite);
     app.stage.addChild(bmFinalSprite);
+    app.stage.addChild(jmFinalSprite);
     app.stage.addChild(mm2Container);
     app.stage.addChild(blueContainer);
     app.stage.addChild(bmContainer);
@@ -697,6 +705,10 @@
       if (window.jiggledDepthMapMesh) {
         window.jiggledDepthMapMesh.textureUpdated();
       }
+      app.renderer.render(blueContainer, jmFinalSprite.texture);
+      // if (window.jiggledDepthMapMesh) {
+      //   window.jiggledDepthMapMesh.textureUpdated();
+      // }
     }
     PIXI.Ticker.shared.add(step);
 
@@ -930,18 +942,20 @@
         mm2Container.removeChild(mm2Container.children[0]);
       }
       mm2Container.addChild(mm2Sprite);
+      while (blueContainer.children[0]) {
+        blueContainer.removeChild(blueContainer.children[0]);
+      }
+      blueContainer.addChild(blueSprite);
 
 
       // Draw all uncached steps
       let maskUpdated = false;
-      let jiggleUpdated = false;
       for (let i = cached.step; i < strokes.length; i++) {
         if (strokes[i].isMaskEditing) {
           drawMaskLine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value)
           maskUpdated = true;
         } else if (strokes[i].isJiggleEditing) {
           drawJiggleine2(strokes[i], strokes[i].path, strokes[i].r1, strokes[i].value);
-          jiggleUpdated = true;
         } else {
           switch (strokes[i].brushId) {
             default:
@@ -960,10 +974,6 @@
 
       if (maskUpdated) {
         updateMaskIndicator();
-      }
-
-      if (jiggleUpdated) {
-        updateJiggleIndicator();
       }
     }
 
@@ -1456,36 +1466,6 @@
       bm3Texture.update();
     }
 
-    function updateJiggleIndicator() {
-      
-      bm2Ctx = bm2Canvas.getContext('2d');
-      bm2Ctx.clearRect(0, 0, bmImage.width, bmImage.height);
-      bm2Ctx.drawImage(bmImage, 0, 0);
-      if (isJiggleEditing && isMaskIndicatorOn) {
-        let dmTempCanvas = app.renderer.extract.canvas(blueContainer);
-        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
-        let dmdd = dmImageData.data;
-
-        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
-        let tmCtx = tempCanvas.getContext('2d');
-        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
-        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
-        let tmdd = tmImageData.data;
-
-        tmCtx.clearRect(0, 0, bmImage.width, bmImage.height);
-        for (let i = 0; i < dmdd.length; i += 4) {
-          // half transparent red on the masked area. invisible on the editable area
-          // Blue color is the jiggle strength
-          tmdd[i] = dmdd[i + 2];
-          tmdd[i + 1] = 255 - dmdd[i + 2];
-          tmdd[i + 2] = 0;
-          tmdd[i + 3] = dmdd[i + 2] == 0 ? 0 : 128;
-        }
-        tmCtx.putImageData(new ImageData(tmdd, bmImage.width, bmImage.height), 0, 0);
-        bm2Ctx.drawImage(tempCanvas, 0, 0);
-      }
-    }
-
     function drawMaskLine2(stroke, path, radius, depth, maskid) {
       if (stroke.lines) {
         for (let index = 0; index < stroke.lines.length; ++index) {
@@ -1708,9 +1688,7 @@
     document.getElementById('top-switcher').addEventListener("show", function (e) {
       let old = isJiggleEditing;
       isJiggleEditing = e.detail[0].index() == 3;
-      if (old != isJiggleEditing) {
-        updateJiggleIndicator();
-      }
+
       // TODO: add this logic to auto finish mask editing when switch tab
       // isMaskEditing = isMaskEditing && e.detail[0].index() == 2;
       // updateMaskIndicator();
@@ -1863,7 +1841,6 @@
         // Toggle the mask indicator, just like in Photoshop
         isMaskIndicatorOn = !isMaskIndicatorOn;
         updateMaskIndicator();
-        updateJiggleIndicator();
       } else if (key.key === '1') {
         window.displacementFilter.uniforms.displayMode = 0;
       } else if (key.key === '2') {
@@ -2021,8 +1998,8 @@
           var r = dmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
           var b = jmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
 
-          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));//1.0 / 8; // 1 2 4 8 16 
-          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));
+          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));
 
           window.jiggleStaticFlags.push(b == 0);
           window.jiggleMovement.push((r - 127.0) / 128.0);
@@ -2065,8 +2042,8 @@
         for (var x = 0; x < window.jiggleMeshW; x++) {
           var b = jmData[(Math.floor(y * window.gridH) * JiggleMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
 
-          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));//1.0 / 8; // 1 2 4 8 16 
-          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));//1.0 / 16.0; // 0 2 4 8 16 32 回彈力
+          window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));
+          window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));
           window.jiggleStaticFlags.push(b == 0);
         }
       }
@@ -2440,6 +2417,10 @@ uniform sampler2D uSampler;
 uniform sampler2D baseMap;
 uniform sampler2D displacementMap;
 
+uniform sampler2D jiggleMap;
+uniform int jiggleMapMode;
+
+
 uniform float textureScale;
 uniform vec2 textureSize;
 uniform float textureWidth;
@@ -2475,30 +2456,6 @@ vec2 mapCoord2(vec2 coord)
 }
 
 
-vec4 textureDiffuseNoBg(vec2 coord)
-{
-    vec2 c = coord;
-    vec2 scale = textureSize * ( min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]) );
-
-    c -= 0.5;                   // Normalize
-    c = c * canvasSize + pan;   // Convert to pixel count, where origin is the center
-    c /= scale;
-
-    c /= zoom;
-    c += 0.5;                   // Unnormalize
-
-
-    if (c[0] <= 0.0 || c[0] >= 1.0 || c[1] <= 0.0 || c[1] >= 1.0)
-    {
-        return vec4(0.0);
-    }
-    else
-    {
-        return texture2D(baseMap, c);
-    }
-}
-
-
 vec2 textureDiffuseCoor(vec2 coord)
 {
     vec2 c = coord;
@@ -2512,6 +2469,20 @@ vec2 textureDiffuseCoor(vec2 coord)
     c += 0.5;                   // Unnormalize
 
     return c;
+}
+
+vec4 textureDiffuseNoBg(vec2 coord)
+{
+    vec2 c = textureDiffuseCoor(coord);
+
+    if (c[0] <= 0.0 || c[0] >= 1.0 || c[1] <= 0.0 || c[1] >= 1.0)
+    {
+        return vec4(0.0);
+    }
+    else
+    {
+        return texture2D(baseMap, c);
+    }
 }
 
 
@@ -2652,8 +2623,19 @@ void main(void)
           1. / 256. * floor(originCoor[1] * 256.0 + 0.5),
           0.5 + 256. * (originCoor[0]  - (1. / 256. * floor(originCoor[0] * 256.0 + 0.5))), 
           0.5 + 256. * (originCoor[1]  - (1. / 256. * floor(originCoor[1] * 256.0 + 0.5))));
+
+          return;
     }
 
+    if (jiggleMapMode == 1) {
+      float jiggleStr = texture2D(jiggleMap, textureDiffuseCoor(coord))[2];
+      if (jiggleStr != 0.0) {
+        gl_FragColor[0] /= 2.0;
+        gl_FragColor[0] += jiggleStr / 2.0;
+        gl_FragColor[1] /= 2.0;
+        gl_FragColor[1] += 0.5 - jiggleStr / 2.0;
+      }
+    }
 }`;
 }
 init();
