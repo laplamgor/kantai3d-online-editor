@@ -309,6 +309,8 @@
       }
       window.displacementFilter.uniforms.maskMap = mmFinalSprite.texture;
       window.displacementFilter.uniforms.maskMapMode = isMaskEditing ? 1 : 0;
+      window.displacementFilter.uniforms.selectedMaskId = maskEditingId;
+
 
       window.displacementFilter.uniforms.jiggleMap = jmFinalSprite.texture;
 
@@ -1422,7 +1424,6 @@
       bm2Ctx.clearRect(0, 0, bmImage.width, bmImage.height);
       bm2Ctx.drawImage(bmImage, 0, 0);
 
-
       if (!isMaskEditing && isMaskIndicatorOn) {
 
         let mask = getCurrentMaskSelected();
@@ -2409,7 +2410,7 @@ uniform sampler2D jiggleMap;
 uniform int jiggleMapMode;
 
 uniform sampler2D maskMap;
-uniform int maskIds[256];
+uniform int selectedMaskId;
 uniform float maskColors[768]; // 3 channels (RGB) * 256
 uniform int maskMapMode;
 
@@ -2635,9 +2636,9 @@ void main(void)
       int j = int(1. * floor(maskId * 256.0 + 0.5));
 
       for (int i = 0; i < 256; i++) {
-        if (i == j) {
+        if (i == j && selectedMaskId != i) {
           vec4 maskCol = vec4(maskColors[3 * i], maskColors[3 * i + 1], maskColors[3 * i + 2], 1.);
-          gl_FragColor = gl_FragColor * 0.5 + maskCol * 0.5;
+          gl_FragColor = gl_FragColor * 0.33 + maskCol * 0.64;
         }
       }
     }
