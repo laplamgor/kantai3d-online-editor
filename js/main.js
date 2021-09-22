@@ -1918,6 +1918,17 @@
       let y = e.clientY;
       tooltipSpan.style.top = (y + 40) + 'px';
       tooltipSpan.style.left = (x + 40) + 'px';
+
+
+      if (e.altKey) {
+        key.preventDefault();
+        modifyKey = 'alt';
+      } else if (e.shiftKey) {
+        key.preventDefault();
+        modifyKey = 'shift';
+      } else {
+        modifyKey = '';
+      }
     };
 
 
