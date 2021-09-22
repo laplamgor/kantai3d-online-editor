@@ -145,6 +145,7 @@
 
       bmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       dmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
+      mmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
       jmFinalSprite.texture = PIXI.RenderTexture.create(dmImage.width, dmImage.height);
 
 
