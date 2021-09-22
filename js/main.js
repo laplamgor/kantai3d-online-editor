@@ -215,6 +215,16 @@
         this.uniforms.quality = 1.0;
       }
 
+      if (!this.uniforms.maskColors && maskColor) {
+        this.uniforms.maskColors = [];
+        for (let i = 0; i < 256; i++) {
+          let color = maskColor[i];
+          this.uniforms.maskColors.push(1.0 / 255.0 * color.r);
+          this.uniforms.maskColors.push(1.0 / 255.0 * color.g);
+          this.uniforms.maskColors.push(1.0 / 255.0 * color.b);
+        }
+      }
+
 
       
     
@@ -297,9 +307,12 @@
         window.displacementFilter.uniforms.baseMap = window.jiggledBaseMapRT.texture;
 
       }
-        window.displacementFilter.uniforms.jiggleMap = jmFinalSprite.texture;
-    
-        window.displacementFilter.uniforms.jiggleMapMode = isJiggleEditing ? 1 : 0;
+      window.displacementFilter.uniforms.maskMap = mmFinalSprite.texture;
+      window.displacementFilter.uniforms.maskMapMode = isMaskEditing ? 1 : 0;
+
+      window.displacementFilter.uniforms.jiggleMap = jmFinalSprite.texture;
+
+      window.displacementFilter.uniforms.jiggleMapMode = isJiggleEditing ? 1 : 0;
 
       // draw the filter...
       filterManager.applyFilter(this, input, output);
@@ -390,6 +403,10 @@
     dm2Container.name = 'dm2Container';
     dm2Container.addChild(dm2Sprite);
 
+    
+    var mmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
+    mmFinalSprite.name = 'mmFinalSprite';
+
     let mm2Container = new PIXI.Container();
     mm2Container.name = 'mm2Container';
     mm2Container.addChild(mm2Sprite);
@@ -424,6 +441,7 @@
 
     app.stage.addChild(dmFinalSprite);
     app.stage.addChild(bmFinalSprite);
+    app.stage.addChild(mmFinalSprite);
     app.stage.addChild(jmFinalSprite);
     app.stage.addChild(mm2Container);
     app.stage.addChild(blueContainer);
@@ -705,6 +723,8 @@
       if (window.jiggledDepthMapMesh) {
         window.jiggledDepthMapMesh.textureUpdated();
       }
+      app.renderer.render(mm2Container, mmFinalSprite.texture);
+
       app.renderer.render(blueContainer, jmFinalSprite.texture);
       // if (window.jiggledDepthMapMesh) {
       //   window.jiggledDepthMapMesh.textureUpdated();
@@ -1401,41 +1421,9 @@
       bm2Ctx = bm2Canvas.getContext('2d');
       bm2Ctx.clearRect(0, 0, bmImage.width, bmImage.height);
       bm2Ctx.drawImage(bmImage, 0, 0);
-      if (isMaskEditing) {
-
-        let mask = getCurrentMaskSelected();
 
 
-        let tempCanvas = new OffscreenCanvas(bmImage.width, bmImage.height);
-        let tmCtx = tempCanvas.getContext('2d');
-        let tmImageData = tmCtx.createImageData(bmImage.width, bmImage.height);
-        tmImageData.data = extractPixelsWithoutPostmultiply(mm2Container);
-        let tmdd = tmImageData.data;
-
-
-        let dmTempCanvas = app.renderer.extract.canvas(mm2Container);
-        let dmImageData = dmTempCanvas.getContext('2d').getImageData(0, 0, bmImage.width, bmImage.height);
-        let dmdd = dmImageData.data;
-
-        for (var i = 0; i < dmdd.length; i += 4) {
-          if (mask[dmdd[i + 1]] == 1) {
-            let maskId = dmdd[i + 1];
-            let color = maskColor[maskId];
-            tmdd[i + 0] = color.r; // r
-            tmdd[i + 1] = color.g; // g
-            tmdd[i + 2] = color.b; // b
-            tmdd[i + 3] = maskId == maskEditingId ? 0 : 192; // a
-          } else {
-            // Red
-            tmdd[i] = 255;
-            tmdd[i + 1] = 0;
-            tmdd[i + 2] = 0;
-            tmdd[i + 3] = 128;
-          }
-        }
-        tmCtx.putImageData(tmImageData, 0, 0);
-        bm2Ctx.drawImage(tempCanvas, 0, 0);
-      } else if (isMaskIndicatorOn) {
+      if (!isMaskEditing && isMaskIndicatorOn) {
 
         let mask = getCurrentMaskSelected();
 
@@ -1483,7 +1471,7 @@
 
       let brushFilter;
       brushFilter = new BrushFilter();
-      brushFilter.maskMap = mm2Sprite.texture;
+      brushFilter.maskMap = mm2Texture;
       brushFilter.alpha = 1; // roller mode
       graphics.filters = [brushFilter];
 
@@ -2420,6 +2408,10 @@ uniform sampler2D displacementMap;
 uniform sampler2D jiggleMap;
 uniform int jiggleMapMode;
 
+uniform sampler2D maskMap;
+uniform int maskIds[256];
+uniform float maskColors[768]; // 3 channels (RGB) * 256
+uniform int maskMapMode;
 
 uniform float textureScale;
 uniform vec2 textureSize;
@@ -2634,6 +2626,19 @@ void main(void)
         gl_FragColor[0] += jiggleStr / 2.0;
         gl_FragColor[1] /= 2.0;
         gl_FragColor[1] += 0.5 - jiggleStr / 2.0;
+      }
+    }
+
+
+    if (maskMapMode == 1) {
+      float maskId = texture2D(maskMap, textureDiffuseCoor(coord))[1];
+      int j = int(1. * floor(maskId * 256.0 + 0.5));
+
+      for (int i = 0; i < 256; i++) {
+        if (i == j) {
+          vec4 maskCol = vec4(maskColors[3 * i], maskColors[3 * i + 1], maskColors[3 * i + 2], 1.);
+          gl_FragColor = gl_FragColor * 0.5 + maskCol * 0.5;
+        }
       }
     }
 }`;
