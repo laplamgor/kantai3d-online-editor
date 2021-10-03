@@ -285,14 +285,15 @@
             }
           }
 
+          if (isTilting) { // Only preview when user holding right click
+            for (var i = 0; i < window.jigglePositions.length; i++) {
+              var pos = window.jigglePositions[i];
+              vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
+              vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
 
-          for (var i = 0; i < window.jigglePositions.length; i++) {
-            var pos = window.jigglePositions[i];
-            vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
-            vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
-
-            vertices2[i * 2] = vertices[i * 2];
-            vertices2[i * 2 + 1] = vertices[i * 2 + 1];
+              vertices2[i * 2] = vertices[i * 2];
+              vertices2[i * 2 + 1] = vertices[i * 2 + 1];
+            }
           }
         }
         window.jiggledBaseMapMesh.geometry.buffers[0].update();
@@ -520,6 +521,7 @@
       switch (event.button) {
         case 2:
           isTilting = false;
+          resetJigglePosition();
           break;
         case 1:
           isPanning = false;
@@ -1996,8 +1998,10 @@
           window.jiggleVelocities.push({ x: 0, y: 0 });
           window.jiggleForces.push({ x: 0, y: 0 });
 
-          var r = dmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
-          var b = jmData[(Math.floor(y * window.gridH) * baseMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
+          
+          var subpixelIndex = (Math.min(Math.floor(y * gridH), baseMapTexture.height - 1) * baseMapTexture.width + Math.min(Math.floor(x * window.gridW), baseMapTexture.width - 1)) * 4;
+          var r = dmData[subpixelIndex];
+          var b = jmData[subpixelIndex + 2];
 
           window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));
           window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));
@@ -2021,7 +2025,8 @@
       window.jiggleMovement = [];
       for (var y = 0; y < window.jiggleMeshH; y++) {
         for (var x = 0; x < window.jiggleMeshW; x++) {
-          var r = dmData[(Math.floor(y * window.gridH) * depthMapTexture.width + Math.floor(x * window.gridW)) * 4 + 0];
+          var subpixelIndex = (Math.min(Math.floor(y * gridH), depthMapTexture.height - 1) * depthMapTexture.width + Math.min(Math.floor(x * window.gridW), depthMapTexture.width - 1)) * 4;
+          var r = dmData[subpixelIndex];
           window.jiggleMovement.push((r - 127.0) / 128.0);
         }
       }
@@ -2041,7 +2046,8 @@
       window.springiness = [];
       for (var y = 0; y < window.jiggleMeshH; y++) {
         for (var x = 0; x < window.jiggleMeshW; x++) {
-          var b = jmData[(Math.floor(y * window.gridH) * JiggleMapTexture.width + Math.floor(x * window.gridW)) * 4 + 2];
+          var subpixelIndex = (Math.min(Math.floor(y * gridH), JiggleMapTexture.height - 1) * JiggleMapTexture.width + Math.min(Math.floor(x * window.gridW), JiggleMapTexture.width - 1)) * 4;
+          var b = jmData[subpixelIndex + 2];
 
           window.damping.push(1.0 / (b / 255.0 * 16.0 + 1));
           window.springiness.push(1.0 / (b / 255.0 * 32.0 + 1));
@@ -2055,6 +2061,25 @@
       window.Mx2 = null;
       window.My2 = null;
     }
+
+    function resetJigglePosition() {
+      window.jigglePositions = [];
+      window.jiggleVelocities = [];
+      window.jiggleForces = [];
+      
+      for (var y = 0; y < window.jiggleMeshH; y++) {
+        for (var x = 0; x < window.jiggleMeshW; x++) {
+          window.jigglePositions.push({ x: window.gridW * x, y: y * window.gridH });
+          window.jiggleVelocities.push({ x: 0, y: 0 });
+          window.jiggleForces.push({ x: 0, y: 0 });
+        }
+      }
+      window.Mx = null;
+      window.My = null;
+      window.Mx2 = null;
+      window.My2 = null;
+    }
+
 
 
     function resetForce(x, y) {
