@@ -16,8 +16,9 @@ No need to install.
 https://laplamgor.github.io/kantai3d-online-editor/
 
 # Tutorial
-You can find more manual in the Github Wiki page
-https://github.com/laplamgor/kantai3d-online-editor/wiki
+[Youtube Videos (4 Parts)](https://www.youtube.com/watch?v=bAnorf52cJQ&list=PL4OoPA8nHbfBbC0PtrLKWch5BKkOKWERa&index=1)
+
+[Extra Text manual in the Github Wiki page (incompleted)](https://github.com/laplamgor/kantai3d-online-editor/wiki)
 
 
 
