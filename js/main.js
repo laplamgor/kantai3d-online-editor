@@ -1308,6 +1308,7 @@
 
         // Create edit button
         let a = document.createElement("a");
+        a.id = 'mask-edit-button-' + maskId;
         a.innerHTML = '<i class="material-icons icon-align">edit</i>';
         a.classList.add("uk-link-heading");
         a.classList.add("uk-padding-small");
@@ -1324,6 +1325,7 @@
           if (this.getAttribute('mask-id') != maskEditingId || !isMaskEditing) {
             this.innerHTML = '<i class="material-icons icon-align">done_outline</i>';
             this.setAttribute('uk-tooltip', "Done");
+            maskEditingIdLast = maskEditingId;
             maskEditingId = maskId;
             isMaskEditing = true;
           } else if (isMaskEditing) {
@@ -1415,6 +1417,7 @@
 
     let isMaskEditing = false;
     let maskEditingId = 0;
+    let maskEditingIdLast = 0;
     let isMaskIndicatorOn = true;
 
     let isJiggleEditing = false;
@@ -1880,6 +1883,11 @@
         UIkit.switcher("#brush-switcher").show(0);
 
 
+      } else if (key.key === 'c') {
+        // if editing mask, switch to last selected mask
+        if (isMaskEditing && maskEditingIdLast != maskEditingId) {
+          document.getElementById('mask-edit-button-' + maskEditingIdLast).click();
+        }
       } else if (key.key === ',' && strokes.length != 0 && !isDrawing) {
         redoList.push(strokes.pop());
         redraw();
