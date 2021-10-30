@@ -584,6 +584,12 @@
         window.displacementFilter.uniforms.pan[1] /= 1.1;
         window.displacementFilter.uniforms.pan[1] -= my;
       }
+
+      // When zoomed in, use nearest pixel rendering to ensure accuracy, 
+      // When zoomed out, use linear mode to reduce aliasing effects
+      window.jiggledBaseMapRT.texture.baseTexture.scaleMode = window.displacementFilter.uniforms.zoom >= 1.0 ? PIXI.SCALE_MODES.NEAREST : PIXI.SCALE_MODES.LINEAR;
+      window.jiggledDepthMapRT.texture.baseTexture.scaleMode = window.displacementFilter.uniforms.zoom >= 1.0 ? PIXI.SCALE_MODES.NEAREST : PIXI.SCALE_MODES.LINEAR;
+
     }
     );
 
