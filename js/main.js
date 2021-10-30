@@ -1877,18 +1877,16 @@
 
       } else if (key.key === 'z') {
         UIkit.switcher("#top-tab").show(1);
+        UIkit.switcher("#brush-tab").show(0);
+        UIkit.switcher("#brush-switcher").show(0);
         UIkit.switcher("#flip-switcher").show(0);
         UIkit.switcher("#pen-flip-switcher").show(0);
-        UIkit.switcher("#brush-tab").show(0);
-        UIkit.switcher("#brush-switcher").show(0);
       } else if (key.key === 'x') {
         UIkit.switcher("#top-tab").show(1);
-        UIkit.switcher("#flip-switcher").show(1);
-        UIkit.switcher("#pen-flip-switcher").show(1);
         UIkit.switcher("#brush-tab").show(0);
         UIkit.switcher("#brush-switcher").show(0);
-
-
+        UIkit.switcher("#flip-switcher").show(1);
+        UIkit.switcher("#pen-flip-switcher").show(1);
       } else if (key.key === 'c') {
         // if editing mask, switch to last selected mask
         if (isMaskEditing && maskEditingIdLast != maskEditingId) {
