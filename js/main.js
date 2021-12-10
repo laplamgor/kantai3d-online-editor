@@ -10,6 +10,12 @@
       }
     );
 
+    window.addEventListener("beforeunload", function (e) {
+      var msg = "\o/";
+      (e || window.event).returnValue = msg; //Gecko + IE
+      return msg;                            //Webkit, Safari, Chrome
+    });
+
 
     window.jigglePositions = [];
     window.jiggleVelocities = [];
