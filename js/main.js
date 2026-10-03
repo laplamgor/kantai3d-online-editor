@@ -208,15 +208,16 @@
     PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
-      this.uniforms.dimensions = {};
       if (input && input.width && input.height) {
         this.uniforms.frameWidth = input.width;
         this.uniforms.frameHeight = input.height;
+        this.uniforms.dimensions = [input.width, input.height, 0, 0];
       }
 
-      this.uniforms.canvasSize = {};
-      this.uniforms.canvasSize[0] = app.renderer.width;
-      this.uniforms.canvasSize[1] = app.renderer.height;
+      this.uniforms.canvasSize = [app.renderer.width, app.renderer.height];
+      if (this.uniforms.textureWidth && this.uniforms.textureHeight) {
+        this.uniforms.textureSize = [this.uniforms.textureWidth, this.uniforms.textureHeight];
+      }
 
       if (!this.uniforms.quality) {
         this.uniforms.quality = 1.0;
@@ -291,15 +292,13 @@
             }
           }
 
-          if (isTilting) { // Only preview when user holding right click
-            for (var i = 0; i < window.jigglePositions.length; i++) {
-              var pos = window.jigglePositions[i];
-              vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
-              vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
+          for (var i = 0; i < window.jigglePositions.length; i++) {
+            var pos = window.jigglePositions[i];
+            vertices[i * 2] = Math.min(Math.max(pos.x, 0), baseMap.width);
+            vertices[i * 2 + 1] = Math.min(Math.max(pos.y, 0), baseMap.height);
 
-              vertices2[i * 2] = vertices[i * 2];
-              vertices2[i * 2 + 1] = vertices[i * 2 + 1];
-            }
+            vertices2[i * 2] = vertices[i * 2];
+            vertices2[i * 2 + 1] = vertices[i * 2 + 1];
           }
         }
         window.jiggledBaseMapMesh.geometry.buffers[0].update();
@@ -2595,20 +2594,21 @@ const float dmax = 1.0;
 // 10 * 1.1
 #define MAXZOOM 11.0
 
-#define MAXSTEPS 1000.0
+#define MAXSTEPS 3000.0
 
 
 float fit = min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]);
-float steps = min(1000.0, max(MAXSTEPS *length(offset  / fit), 30.0)) * quality;
+float steps = min(3000.0, max(MAXSTEPS *length(offset  / fit), 30.0)) * quality;
 
 void main(void)
 {
     vec2 scale2 = scale * vec2(textureHeight / frameWidth,
                               textureWidth / frameHeight )
                   * vec2(1, -1);
+    vec2 invOffset = -offset;
     mat2 baseVector =
-        mat2(vec2((0.5 - focus) * (offset * zoom * fit) - (offset * zoom * fit) / 2.0) * scale2,
-            vec2((0.5 - focus) * (offset * zoom * fit) + (offset * zoom * fit) / 2.0) * scale2);
+        mat2(vec2((0.5 - focus) * (invOffset * zoom * fit) - (invOffset * zoom * fit) / 2.0) * scale2,
+            vec2((0.5 - focus) * (invOffset * zoom * fit) + (invOffset * zoom * fit) / 2.0) * scale2);
 
 
     vec2 pos = (vTextureCoord);
@@ -2617,29 +2617,33 @@ void main(void)
     float dstep = 1.0 / (steps - 1.0);
     vec2 vstep = (vector[1] - vector[0]) / vec2((steps - 1.0));
 
-    vec2 posSumLast = vec2(0.0);
-    vec2 posSum = vec2(0.0);
+    vec2 posSumLast = pos + vector[1];
+    vec2 posSum = pos + vector[0];
 
     float weigth = 1.0;
-    float dpos;
-    float dposLast;
+    float dpos = 1.0;
+    float dposLast = 1.0;
+    bool hitSurface = false;
 
-    for (float i = 0.0; i < MAXSTEPS * MAXOFFSETLENGTH * MAXZOOM; ++i)
+    float maxRayDepth = 0.0;
+
+    for (float i = 0.0; i < 1000.0; ++i)
     {
+        if (i >= steps)
+        {
+            break;
+        }
+
         vec2 vpos = pos + vector[1] - i * vstep;
-        dpos = 1.0 - i * dstep;
-        float depth = textureDepth(vpos).r;
-
-        // This is good for in-game rendering but bad for cursor projection when drawing depth maps
-        // if (textureDiffuseNoBg(vpos)[3] == 0.0)
-        // {
-        //     depth = 0.0;
-        // }
-
-        depth = clamp(depth, dmin, dmax);
+        dpos = clamp(1.0 - i * dstep, 0.0, 1.0);
+        float depth = clamp(textureDepth(vpos).r, dmin, dmax);
 
         if (dpos > depth)
         {
+            if (depth > maxRayDepth)
+            {
+                maxRayDepth = depth;
+            }
             posSumLast = vpos;
             dposLast = dpos;
         }
@@ -2647,32 +2651,50 @@ void main(void)
         {
             posSum = vpos;
             weigth = (depth - dposLast) / dstep;
+            hitSurface = true;
             break;
         }
     };
-    vec2 coord = (posSum - posSumLast) * -clamp(weigth * 0.5 + 0.5, 0.0, 1.5) + posSum;
-    if (displayMode == 0)
+    vec2 coord = hitSurface ? ((posSum - posSumLast) * -clamp(weigth * 0.5 + 0.5, 0.0, 1.5) + posSum) : pos;
+
+    // 4-directional binary cliff detection
+    float fitVal = min(canvasSize[0] / textureSize[0], canvasSize[1] / textureSize[1]);
+    vec2 texel = vec2(0.001 * fitVal * zoom, 0.001 * fitVal * zoom);
+
+    float depthR = textureDepth(coord + vec2(texel.x, 0.0)).r;
+    float depthL = textureDepth(coord - vec2(texel.x, 0.0)).r;
+    float depthU = textureDepth(coord + vec2(0.0, texel.y)).r;
+    float depthD = textureDepth(coord - vec2(0.0, texel.y)).r;
+
+    float diffX = depthR - depthL;
+    float diffY = depthU - depthD;
+
+    bool isCliff = false;
+    float threshold = 0.02;
+
+    // Check horizontal tilt direction
+    if (diffX > threshold) {
+        isCliff = true;
+    }
+    if (-diffX > threshold) {
+        isCliff = true;
+    }
+
+    // Check vertical tilt direction
+    if (diffY > threshold) {
+        isCliff = true;
+    }
+    if (-diffY > threshold) {
+        isCliff = true;
+    }
+
+    if (isCliff)
+    {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+    else
     {
         gl_FragColor = textureDiffuse(coord);
-    }
-    else if (displayMode == 1)
-    {
-        gl_FragColor = normal(coord);
-    }
-    else if (displayMode == 2)
-    {
-        gl_FragColor = normalMixed(coord);
-    }
-    else 
-    {
-        vec2 originCoor = (textureDiffuseCoor(coord) - textureDiffuseCoor(pos)) + 0.5;
-        gl_FragColor = vec4(
-          1. / 256. * floor(originCoor[0] * 256.0 + 0.5),
-          1. / 256. * floor(originCoor[1] * 256.0 + 0.5),
-          0.5 + 256. * (originCoor[0]  - (1. / 256. * floor(originCoor[0] * 256.0 + 0.5))), 
-          0.5 + 256. * (originCoor[1]  - (1. / 256. * floor(originCoor[1] * 256.0 + 0.5))));
-
-          return;
     }
 
     if (jiggleMapMode == 1) {
