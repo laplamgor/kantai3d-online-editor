@@ -27,3 +27,5 @@ Kantai3D Online Editor is completely static and does not require any build tool.
 
 It works on most common web server (e.g. Nginx) and hosting services (e.g. GitHub Pages). Nginx for example.
 
+You can also open `index.html` directly from the file system (double-click it) - no local server is required. The built-in sample images are embedded as data URIs in `js/default-images.js` for this reason; browsers refuse to read pixel data from `file://` images because that would taint the canvases.
+

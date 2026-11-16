@@ -32,7 +32,10 @@
     let curOnTexY = 0;
 
     let bmImage = new Image(); // The base map image
-    let bmPath = './f2152.png';
+    // Use the embedded data URI when available so the editor also works when
+    // index.html is opened from the file system (file:// images would taint
+    // the canvases and break getImageData()/WebGL uploads).
+    let bmPath = (window.KANTAI_DEFAULT_IMAGES && window.KANTAI_DEFAULT_IMAGES.baseMap) || './f2152.png';
 
     let bm1Canvas = document.querySelector("#base-map-canvas"); // The canvas containing the base map image
     let bm1Ctx;
@@ -108,7 +111,7 @@
     // Load depth map as buffer
     let dmCanvas = document.querySelector("#depth-map-canvas");;
     let dmCtx;
-    let dmPath = './f2152_depth.png';
+    let dmPath = (window.KANTAI_DEFAULT_IMAGES && window.KANTAI_DEFAULT_IMAGES.depthMap) || './f2152_depth.png';
     let dmImage = new Image();
     let dm1Texture = null;
     let dm2Texture = PIXI.Texture.EMPTY;
