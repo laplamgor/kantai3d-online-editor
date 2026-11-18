@@ -35,7 +35,11 @@
     // Use the embedded data URI when available so the editor also works when
     // index.html is opened from the file system (file:// images would taint
     // the canvases and break getImageData()/WebGL uploads).
-    let bmPath = (window.KANTAI_DEFAULT_IMAGES && window.KANTAI_DEFAULT_IMAGES.baseMap) || './f2152.png';
+    const defaultImages = window.KANTAI_DEFAULT_IMAGES || {};
+    const defaultLayerList = (defaultImages.layers && defaultImages.layers.length)
+      ? defaultImages.layers
+      : [{ baseMap: defaultImages.baseMap, depthMap: defaultImages.depthMap }];
+    let bmPath = defaultLayerList[0].baseMap || './f2152.png';
 
     let bm1Canvas = document.querySelector("#base-map-canvas"); // The canvas containing the base map image
     let bm1Ctx;
@@ -56,6 +60,21 @@
     let container = new PIXI.Container();
     let dummySprite = new PIXI.Sprite.from(PIXI.Texture.WHITE); // Without this, PIXI will over-optimize to skip the shader
     dummySprite.name = 'dummySprite';
+
+    // --- Layer compositing state -------------------------------------
+    // Every layer is rendered with displacementFrag into its own screen-sized
+    // render texture.  A composite shader then stacks those textures over the
+    // purple/grid backdrop.  See the compositor setup further down.
+    let layerRenderers = [];
+    let activeLayerRT = null;
+    let activeRenderContainer = null;
+    let activeDummy = null;
+    let compositeFilter = null;
+    let bgRT = null;
+    let bgContainer = null;
+    let bgFill = null;
+    let bgGrid = null;
+    let bgVisible = true;
 
     // Load base map as buffer
     bmImage.onload = function () {
@@ -111,7 +130,7 @@
     // Load depth map as buffer
     let dmCanvas = document.querySelector("#depth-map-canvas");;
     let dmCtx;
-    let dmPath = (window.KANTAI_DEFAULT_IMAGES && window.KANTAI_DEFAULT_IMAGES.depthMap) || './f2152_depth.png';
+    let dmPath = defaultLayerList[0].depthMap || './f2152_depth.png';
     let dmImage = new Image();
     let dm1Texture = null;
     let dm2Texture = PIXI.Texture.EMPTY;
@@ -220,12 +239,20 @@
 
     // ------------------------------------------------------------------
     // Layer list.  Each entry is one PNG pair: colour+alpha and depth.
-    // Only the first entry is rendered (the original single-layer pipeline
-    // runs on it); the rest are staged thumbnails that can be reordered.
+    // Entry 0 is the topmost layer and is the one the depth editor edits;
+    // every entry is composited bottom-to-top by the compositor.
     // ------------------------------------------------------------------
     const layerListEl = document.getElementById('layer-list');
     const layerAddEl = document.getElementById('layer-add-button');
-    const layers = [{ colorSrc: bmPath, depthSrc: dmPath }];
+    const layers = defaultLayerList.map(function (l) {
+      return {
+        colorSrc: (l && l.baseMap) || './f2152.png',
+        depthSrc: (l && l.depthMap) || './f2152_depth.png'
+      };
+    });
+    if (layers.length === 0) {
+      layers.push({ colorSrc: bmPath, depthSrc: dmPath });
+    }
 
     function blankLayer() {
       const w = bmImage.naturalWidth || 600;
@@ -311,6 +338,10 @@
         first.querySelector('[data-act="down"]').disabled = layers.length < 2;
         first.querySelector('[data-act="delete"]').disabled = layers.length < 2;
       }
+
+      // Keep the per-layer render targets in sync with add/drop/reorder/source
+      // changes.  No-op until the compositor has been created.
+      rebuildLayerRenderers();
     }
 
     function setLayerSource(index, part, src) {
@@ -366,6 +397,10 @@
     }
 
     function addLayer() {
+      if (layers.length >= MAX_COMPOSITE_LAYERS) {
+        alert('The editor composites up to ' + MAX_COMPOSITE_LAYERS + ' layers.');
+        return;
+      }
       captureActiveLayer();
       layers.push(blankLayer());
       renderLayerList();
@@ -423,8 +458,8 @@
 
     let needUpdateReverseMapBuffer = true;
 
-    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
-    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
+    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0 });
+    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0 });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
       if (input && input.width && input.height) {
@@ -524,11 +559,11 @@
         window.jiggledDepthMapMesh.geometry.buffers[0].update();
     
         window.jiggledDepthMapMesh.visible = true;
-        app.renderer.render(jiggledDepthMapMesh, window.jiggledDepthMapRT.texture);
+        app.renderer.render(jiggledDepthMapMesh, window.jiggledDepthMapRT.texture, true);
         window.jiggledDepthMapMesh.visible = false;
 
         window.jiggledBaseMapMesh.visible = true;
-        app.renderer.render(jiggledBaseMapMesh, window.jiggledBaseMapRT.texture);
+        app.renderer.render(jiggledBaseMapMesh, window.jiggledBaseMapRT.texture, true);
         window.jiggledBaseMapMesh.visible = false;
         window.displacementFilter.uniforms.baseMap = window.jiggledBaseMapRT.texture;
 
@@ -592,7 +627,27 @@
 
 
 
-    container.filters = [window.displacementFilter];
+    // The active layer is rendered with the original displacement shader into
+    // its own screen-sized texture.  The stage then runs the small composite
+    // shader, which stacks every layer over the purple/grid backdrop.
+    activeDummy = new PIXI.Sprite.from(PIXI.Texture.WHITE);
+    activeRenderContainer = new PIXI.Container();
+    activeRenderContainer.addChild(activeDummy);
+    activeRenderContainer.filters = [window.displacementFilter];
+    window.displacementFilter.uniforms.alphaOnly = 1;
+
+    compositeFilter = new PIXI.Filter(null, compositeFrag, {
+      bgMap: PIXI.Texture.EMPTY,
+      layerCount: 0,
+      layer0: PIXI.Texture.EMPTY,
+      layer1: PIXI.Texture.EMPTY,
+      layer2: PIXI.Texture.EMPTY,
+      layer3: PIXI.Texture.EMPTY,
+      layer4: PIXI.Texture.EMPTY,
+      layer5: PIXI.Texture.EMPTY
+    });
+
+    container.filters = [compositeFilter];
     container.addChild(dummySprite); // let the filter to "do something"
 
 
@@ -616,7 +671,8 @@
     bmContainer.addChild(cursorContainer);
 
     var gridGraphics = new PIXI.Graphics();
-    bmContainer.addChild(gridGraphics);
+    // The grid is drawn in screen space behind the composited layers (see
+    // bgGrid / updateBackground), not into the layer's base map.
 
 
     var dmFinalSprite = new PIXI.Sprite(PIXI.RenderTexture.create(600, 800));
@@ -680,7 +736,231 @@
     app.stage.addChild(containerReverseMap);
     app.stage.addChild(container);
 
+    // ------------------------------------------------------------------
+    // Layer renderers / compositor
+    //
+    // Each layer is rendered by displacementFrag into a screen-sized render
+    // texture with alpha preserved (alphaOnly = 1).  The composite shader
+    // then stacks those textures bottom-to-top over an opaque purple/grid
+    // backdrop.  The purple fill and grid therefore only show through pixels
+    // that are transparent in every layer.
+    // ------------------------------------------------------------------
 
+    function createLayerRenderer(layer, index) {
+      const maskColorsZero = new Array(768).fill(0);
+      const filter = new PIXI.Filter(null, displacementFrag, {
+        displacementMap: PIXI.Texture.from(layer.depthSrc),
+        baseMap: PIXI.Texture.from(layer.colorSrc),
+        jiggleMap: PIXI.Texture.EMPTY,
+        maskMap: PIXI.Texture.EMPTY,
+        jiggleMapMode: 0,
+        maskMapMode: 0,
+        selectedMaskId: 0,
+        maskColors: maskColorsZero,
+        alphaOnly: 1,
+        displayMode: 2,
+        pan: [0, 0],
+        zoom: 1,
+        offset: [0, 0],
+        scale: 1,
+        focus: 0.5,
+        quality: 1,
+        textureSize: [1, 1],
+        textureWidth: 1,
+        textureHeight: 1,
+        textureScale: 1,
+        canvasSize: [1, 1],
+        frameWidth: 1,
+        frameHeight: 1
+      });
+
+      filter.apply = function (filterManager, input, output) {
+        const g = window.displacementFilter.uniforms;
+        const tw = g.textureWidth || 1;
+        const th = g.textureHeight || 1;
+
+        this.uniforms.frameWidth = input.width;
+        this.uniforms.frameHeight = input.height;
+        this.uniforms.canvasSize = [app.renderer.width, app.renderer.height];
+
+        this.uniforms.pan = g.pan;
+        this.uniforms.zoom = g.zoom;
+        this.uniforms.offset = g.offset;
+        this.uniforms.scale = g.scale;
+        this.uniforms.focus = g.focus;
+        this.uniforms.quality = g.quality || 1.0;
+        this.uniforms.displayMode = g.displayMode;
+
+        this.uniforms.alphaOnly = 1;
+        this.uniforms.jiggleMapMode = 0;
+        this.uniforms.maskMapMode = 0;
+
+        this.uniforms.textureWidth = tw;
+        this.uniforms.textureHeight = th;
+        this.uniforms.textureSize = [tw, th];
+        this.uniforms.textureScale = 1.0;
+
+        filterManager.applyFilter(this, input, output);
+      };
+
+      const dummy = new PIXI.Sprite.from(PIXI.Texture.WHITE);
+      const cont = new PIXI.Container();
+      cont.addChild(dummy);
+      cont.filters = [filter];
+
+      const w = Math.max(1, app.renderer.screen.width || app.renderer.width || 1);
+      const h = Math.max(1, app.renderer.screen.height || app.renderer.height || 1);
+      const rt = PIXI.RenderTexture.create(w, h);
+
+      return { layer, index, filter, container: cont, dummy, rt };
+    }
+
+    function rebuildLayerRenderers() {
+      if (!compositeFilter) return;
+
+      for (const r of layerRenderers) {
+        if (r.rt) { r.rt.destroy(true); r.rt = null; }
+        if (r.filter) { r.filter.destroy(); r.filter = null; }
+        if (r.container) { r.container.destroy({ children: true }); r.container = null; }
+      }
+      layerRenderers = [];
+
+      for (let i = 1; i < layers.length && i < MAX_COMPOSITE_LAYERS; i++) {
+        layerRenderers.push(createLayerRenderer(layers[i], i));
+      }
+
+      updateCompositeUniforms();
+    }
+
+    function ensureRenderTargets() {
+      if (!compositeFilter) return;
+
+      const w = Math.max(1, app.renderer.screen.width || app.renderer.width || 1);
+      const h = Math.max(1, app.renderer.screen.height || app.renderer.height || 1);
+
+      if (!activeLayerRT || activeLayerRT.width !== w || activeLayerRT.height !== h) {
+        if (activeLayerRT) activeLayerRT.destroy(true);
+        activeLayerRT = PIXI.RenderTexture.create(w, h);
+      }
+      if (!bgRT || bgRT.width !== w || bgRT.height !== h) {
+        if (bgRT) bgRT.destroy(true);
+        bgRT = PIXI.RenderTexture.create(w, h);
+      }
+      for (const r of layerRenderers) {
+        if (!r.rt || r.rt.width !== w || r.rt.height !== h) {
+          if (r.rt) r.rt.destroy(true);
+          r.rt = PIXI.RenderTexture.create(w, h);
+        }
+      }
+
+      if (activeDummy) { activeDummy.width = w; activeDummy.height = h; }
+      for (const r of layerRenderers) { r.dummy.width = w; r.dummy.height = h; }
+
+      updateCompositeUniforms();
+    }
+
+    function updateCompositeUniforms() {
+      if (!compositeFilter) return;
+
+      let n = 0;
+      // layers[0] is the topmost layer, so composite from the end (background)
+      // towards the front.
+      for (let i = layers.length - 1; i >= 0 && n < MAX_COMPOSITE_LAYERS; i--) {
+        let rt = null;
+        if (i === 0) {
+          rt = activeLayerRT;
+        } else {
+          const r = layerRenderers.find(x => x.index === i);
+          if (r) rt = r.rt;
+        }
+        if (!rt) continue;
+        compositeFilter.uniforms['layer' + n] = rt;
+        n++;
+      }
+      for (let i = n; i < MAX_COMPOSITE_LAYERS; i++) {
+        compositeFilter.uniforms['layer' + i] = PIXI.Texture.EMPTY;
+      }
+      compositeFilter.uniforms.layerCount = n;
+    }
+
+    function updateBackground() {
+      if (!bgRT || !bgContainer || !bgFill || !bgGrid) return;
+
+      const w = bgRT.width;
+      const h = bgRT.height;
+
+      bgFill.clear();
+      bgFill.beginFill(0x8080ff, 1);
+      bgFill.drawRect(0, 0, w, h);
+      bgFill.endFill();
+
+      bgGrid.clear();
+      if (bgVisible && window.displacementFilter && window.displacementFilter.uniforms) {
+        const u = window.displacementFilter.uniforms;
+        const tw = u.textureWidth || bmImage.width || w;
+        const th = u.textureHeight || bmImage.height || h;
+        const zoom = u.zoom || 1;
+        const fit = Math.min(w / tw, h / th);
+        const scale = fit * zoom;
+        const pan = u.pan || [0, 0];
+        const gw = (window.gridW || 10) * scale;
+        const gh = (window.gridH || 10) * scale;
+        const ox = w / 2 - pan[0] - (tw / 2) * scale;
+        const oy = h / 2 - pan[1] - (th / 2) * scale;
+
+        bgGrid.lineStyle(1, 0xffc2c2, 0.1);
+        if (gw > 2) {
+          const k0 = Math.ceil((0 - ox) / gw);
+          for (let x = ox + k0 * gw; x <= w; x += gw) {
+            bgGrid.moveTo(x, 0);
+            bgGrid.lineTo(x, h);
+          }
+        }
+        if (gh > 2) {
+          const k0 = Math.ceil((0 - oy) / gh);
+          for (let y = oy + k0 * gh; y <= h; y += gh) {
+            bgGrid.moveTo(0, y);
+            bgGrid.lineTo(w, y);
+          }
+        }
+      }
+
+      app.renderer.render(bgContainer, bgRT, true);
+      compositeFilter.uniforms.bgMap = bgRT;
+    }
+
+    function renderLayers() {
+      if (!compositeFilter || !activeRenderContainer) return;
+
+      ensureRenderTargets();
+
+      const w = Math.max(1, app.renderer.screen.width || app.renderer.width || 1);
+      const h = Math.max(1, app.renderer.screen.height || app.renderer.height || 1);
+
+      activeDummy.width = w;
+      activeDummy.height = h;
+
+      window.displacementFilter.uniforms.alphaOnly = 1;
+      app.renderer.render(activeRenderContainer, activeLayerRT, true);
+
+      for (const r of layerRenderers) {
+        r.dummy.width = w;
+        r.dummy.height = h;
+        app.renderer.render(r.container, r.rt, true);
+      }
+
+      updateBackground();
+      updateCompositeUniforms();
+    }
+
+    bgContainer = new PIXI.Container();
+    bgFill = new PIXI.Graphics();
+    bgGrid = new PIXI.Graphics();
+    bgContainer.addChild(bgFill);
+    bgContainer.addChild(bgGrid);
+
+    ensureRenderTargets();
+    rebuildLayerRenderers();
 
     // app.stage.addChild(window.jiggledDepthMapRT);
     // app.stage.addChild(window.jiggledBaseMapRT);
@@ -856,7 +1136,8 @@
 
         if (window.jiggledBaseMapMesh) {
           var vertices = window.jiggledBaseMapMesh.geometry.buffers[0].data;
-          renderVertices(vertices);
+          // Grid is now a screen-space backdrop; the jiggle vertices are no
+          // longer drawn into the base map.
         }
 
         handleMouseMove();
@@ -950,20 +1231,23 @@
           document.getElementById('tooltip-span').style.visibility = "hidden";
         }
       }
-      app.renderer.render(bmContainer, bmFinalSprite.texture);
+      app.renderer.render(bmContainer, bmFinalSprite.texture, true);
       if (window.jiggledBaseMapMesh) {
         window.jiggledBaseMapMesh.textureUpdated();
       }
-      app.renderer.render(dm2Container, dmFinalSprite.texture);
+      app.renderer.render(dm2Container, dmFinalSprite.texture, true);
       if (window.jiggledDepthMapMesh) {
         window.jiggledDepthMapMesh.textureUpdated();
       }
-      app.renderer.render(mm2Container, mmFinalSprite.texture);
+      app.renderer.render(mm2Container, mmFinalSprite.texture, true);
 
-      app.renderer.render(blueContainer, jmFinalSprite.texture);
+      app.renderer.render(blueContainer, jmFinalSprite.texture, true);
       // if (window.jiggledDepthMapMesh) {
       //   window.jiggledDepthMapMesh.textureUpdated();
       // }
+
+      // Render every layer to its own texture, then update the composite pass.
+      renderLayers();
     }
     PIXI.Ticker.shared.add(step);
 
@@ -1000,6 +1284,8 @@
 
       dummySprite.width = app.renderer.screen.width;
       dummySprite.height = app.renderer.screen.height;
+
+      ensureRenderTargets();
     }
 
 
@@ -1985,7 +2271,7 @@
       } else if (key.key === '3') {
         window.displacementFilter.uniforms.displayMode = 2;
       } else if (key.key === '4') {
-        gridGraphics.visible = !gridGraphics.visible;
+        bgVisible = !bgVisible;
       } else if (key.key === 'q') {
         UIkit.switcher("#top-tab").show(0);
       } else if (key.key === 'w') {
@@ -2587,6 +2873,11 @@ uniform vec2 pan;
 uniform float zoom;
 uniform int displayMode;
 
+// 0 = replace transparent pixels with the purple editor backdrop (legacy
+// single-layer view).  1 = keep the layer's own alpha so layers can be
+// composited over each other and over the backdrop.
+uniform int alphaOnly;
+
 uniform sampler2D uSampler;
 uniform sampler2D baseMap;
 uniform sampler2D displacementMap;
@@ -2667,6 +2958,11 @@ vec4 textureDiffuseNoBg(vec2 coord)
 vec4 textureDiffuse(vec2 coord)
 {
     vec4 withoutBg = textureDiffuseNoBg(coord);
+
+    if (alphaOnly == 1)
+    {
+        return withoutBg;
+    }
 
     return withoutBg * withoutBg[3] + vec4(0.5, 0.5, 1.0, 1.0) * (1.0 - withoutBg[3]);
 }
@@ -2781,17 +3077,27 @@ void main(void)
         }
     };
     vec2 coord = (posSum - posSumLast) * -clamp(weigth * 0.5 + 0.5, 0.0, 1.5) + posSum;
+
+    vec4 outColor;
     if (displayMode == 0)
     {
-        gl_FragColor = textureDiffuse(coord);
+        outColor = textureDiffuse(coord);
     }
     else if (displayMode == 1)
     {
-        gl_FragColor = normal(coord);
+        outColor = normal(coord);
+        if (alphaOnly == 1)
+        {
+            outColor.a = textureDiffuseNoBg(coord).a;
+        }
     }
     else if (displayMode == 2)
     {
-        gl_FragColor = normalMixed(coord);
+        outColor = normalMixed(coord);
+        if (alphaOnly == 1)
+        {
+            outColor.a = textureDiffuseNoBg(coord).a;
+        }
     }
     else 
     {
@@ -2808,10 +3114,10 @@ void main(void)
     if (jiggleMapMode == 1) {
       float jiggleStr = texture2D(jiggleMap, textureDiffuseCoor(coord))[2];
       if (jiggleStr != 0.0) {
-        gl_FragColor[0] /= 2.0;
-        gl_FragColor[0] += jiggleStr / 2.0;
-        gl_FragColor[1] /= 2.0;
-        gl_FragColor[1] += 0.5 - jiggleStr / 2.0;
+        outColor[0] /= 2.0;
+        outColor[0] += jiggleStr / 2.0;
+        outColor[1] /= 2.0;
+        outColor[1] += 0.5 - jiggleStr / 2.0;
       }
     }
 
@@ -2823,10 +3129,57 @@ void main(void)
       for (int i = 0; i < 256; i++) {
         if (i == j && selectedMaskId != i) {
           vec4 maskCol = vec4(maskColors[3 * i], maskColors[3 * i + 1], maskColors[3 * i + 2], 1.);
-          gl_FragColor = gl_FragColor * 0.33 + maskCol * 0.64;
+          outColor = outColor * 0.33 + maskCol * 0.64;
         }
       }
     }
+
+    if (alphaOnly == 1)
+    {
+        // The layer texture is composited later; store premultiplied alpha so
+        // a simple src + dst * (1 - a) blend works in the composite pass.
+        gl_FragColor = vec4(outColor.rgb * outColor.a, outColor.a);
+    }
+    else
+    {
+        gl_FragColor = outColor;
+    }
+}`;
+
+  // Maximum number of layers the composite shader can sample, counting the
+  // active (top) layer.  One texture unit is reserved for the filter's own
+  // input, so keep this at 6.  The active layer occupies one slot, so at most
+  // MAX_COMPOSITE_LAYERS - 1 extra layer render targets are created.
+  const MAX_COMPOSITE_LAYERS = 6;
+
+  // Stacks the per-layer premultiplied RGBA textures (bottom to top) over an
+  // opaque backdrop.  Written by hand (no dynamic sampler arrays) because
+  // GLSL ES 1.00 cannot index sampler arrays with a loop counter.
+  let compositeFrag =
+    `precision mediump float;
+varying vec2 vTextureCoord;
+
+uniform sampler2D bgMap;
+uniform sampler2D layer0;
+uniform sampler2D layer1;
+uniform sampler2D layer2;
+uniform sampler2D layer3;
+uniform sampler2D layer4;
+uniform sampler2D layer5;
+uniform int layerCount;
+
+void main(void)
+{
+    vec3 col = texture2D(bgMap, vTextureCoord).rgb;
+
+    if (layerCount > 0) { vec4 l = texture2D(layer0, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+    if (layerCount > 1) { vec4 l = texture2D(layer1, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+    if (layerCount > 2) { vec4 l = texture2D(layer2, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+    if (layerCount > 3) { vec4 l = texture2D(layer3, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+    if (layerCount > 4) { vec4 l = texture2D(layer4, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+    if (layerCount > 5) { vec4 l = texture2D(layer5, vTextureCoord); col = l.rgb + col * (1.0 - l.a); }
+
+    gl_FragColor = vec4(col, 1.0);
 }`;
 }
 init();
