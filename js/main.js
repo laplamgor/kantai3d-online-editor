@@ -137,6 +137,19 @@
     maskSprite.name = 'maskSprite';
 
     dmImage.onload = function () {
+      // Switching layers reloads this handler; drop the previous layer's
+      // jiggle meshes before building new ones.
+      for (const m of [window.jiggledBaseMapMesh, window.jiggledDepthMapMesh,
+                       window.jiggledDepthMapRT, window.jiggledBaseMapRT]) {
+        if (!m) continue;
+        try { app.stage.removeChild(m); } catch (e) { /* not attached */ }
+        try { m.destroy({ children: true }); } catch (e) { /* already gone */ }
+      }
+      window.jiggledBaseMapMesh = null;
+      window.jiggledDepthMapMesh = null;
+      window.jiggledDepthMapRT = null;
+      window.jiggledBaseMapRT = null;
+
       dmCanvas.width = dmImage.width;
       dmCanvas.height = dmImage.height;
       dmCtx = dmCanvas.getContext('2d');
@@ -205,7 +218,209 @@
     }
     dmImage.src = dmPath;
 
+    // ------------------------------------------------------------------
+    // Layer list.  Each entry is one PNG pair: colour+alpha and depth.
+    // Only the first entry is rendered (the original single-layer pipeline
+    // runs on it); the rest are staged thumbnails that can be reordered.
+    // ------------------------------------------------------------------
+    const layerListEl = document.getElementById('layer-list');
+    const layerAddEl = document.getElementById('layer-add-button');
+    const layers = [{ colorSrc: bmPath, depthSrc: dmPath }];
+
+    function blankLayer() {
+      const w = bmImage.naturalWidth || 600;
+      const h = bmImage.naturalHeight || 800;
+      const c = document.createElement('canvas');
+      c.width = w;
+      c.height = h;
+      const colorSrc = c.toDataURL('image/png');
+      const d = document.createElement('canvas');
+      d.width = w;
+      d.height = h;
+      const dc = d.getContext('2d');
+      dc.fillStyle = 'rgba(127,0,0,1)';
+      dc.fillRect(0, 0, w, h);
+      return { colorSrc, depthSrc: d.toDataURL('image/png') };
+    }
+
+    function resetDepthHistory() {
+      strokes = [];
+      redoList = [];
+      for (let k = 0; k < cacheSnapshots.length; k++) {
+        cacheSnapshots[k].dm.destroy(true);
+        cacheSnapshots[k].mm.destroy(true);
+        cacheSnapshots[k].jm.destroy(true);
+      }
+      cacheSnapshots = [];
+    }
+
+    // Keep edits painted on the active depth canvas when it stops being first.
+    function captureActiveLayer() {
+      if (dmCanvas && dmCanvas.width > 0 && dmCanvas.height > 0) {
+        try { layers[0].depthSrc = dmCanvas.toDataURL('image/png'); } catch (e) { /* tainted */ }
+      }
+    }
+
+    function sameSrc(a, b) {
+      if (!a || !b) return false;
+      try { return new URL(a, location.href).href === new URL(b, location.href).href; } catch (e) { return a === b; }
+    }
+
+    function activateFirstLayer() {
+      const L = layers[0];
+      if (!L) return;
+      const colorChanged = !sameSrc(bmImage.src, L.colorSrc);
+      const depthChanged = !sameSrc(dmImage.src, L.depthSrc);
+      // The renderer replays cached depth snapshots in redraw(); drop them
+      // whenever the active depth changes or the old depth stays on screen.
+      if (depthChanged) resetDepthHistory();
+      if (colorChanged) bmImage.src = L.colorSrc;
+      if (depthChanged) dmImage.src = L.depthSrc;
+    }
+
+    function makePreviewRow(index) {
+      const L = layers[index];
+      const row = document.createElement('div');
+      row.className = 'k3d-layer';
+      row.dataset.dynamic = '1';
+      row.dataset.index = String(index);
+      row.innerHTML =
+        '<div class="k3d-layer-head">' +
+        '<span class="k3d-layer-name">Layer ' + (index + 1) + '</span>' +
+        '<span class="k3d-layer-btns">' +
+        '<button type="button" data-act="up" title="Move up">&#8593;</button>' +
+        '<button type="button" data-act="down"' + (index === layers.length - 1 ? ' disabled' : '') + ' title="Move down">&#8595;</button>' +
+        '<button type="button" data-act="delete" title="Delete layer">&#10005;</button>' +
+        '</span></div>' +
+        '<div class="k3d-layer-thumbs">' +
+        '<img class="k3d-thumb" data-part="color" draggable="false">' +
+        '<img class="k3d-thumb" data-part="depth" draggable="false">' +
+        '</div>';
+      row.querySelector('[data-part="color"]').src = L.colorSrc;
+      row.querySelector('[data-part="depth"]').src = L.depthSrc;
+      return row;
+    }
+
+    function renderLayerList() {
+      layerListEl.querySelectorAll('[data-dynamic="1"]').forEach(el => el.remove());
+      for (let i = 1; i < layers.length; i++) {
+        layerListEl.appendChild(makePreviewRow(i));
+      }
+      const first = layerListEl.querySelector('.k3d-layer[data-index="0"]');
+      if (first) {
+        first.querySelector('[data-act="down"]').disabled = layers.length < 2;
+        first.querySelector('[data-act="delete"]').disabled = layers.length < 2;
+      }
+    }
+
+    function setLayerSource(index, part, src) {
+      const key = part === 'color' ? 'colorSrc' : 'depthSrc';
+      if (index === 0) {
+        if (part === 'color') {
+          if (!confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) return;
+          resetDepthHistory();
+          bmImage.src = src;
+          layers[0].colorSrc = src;
+          const probe = new Image();
+          probe.onload = function () {
+            const c = document.createElement('canvas');
+            c.width = probe.width;
+            c.height = probe.height;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = 'rgba(127,0,0,1)';
+            ctx.fillRect(0, 0, probe.width, probe.height);
+            layers[0].depthSrc = c.toDataURL('image/png');
+            dmImage.src = layers[0].depthSrc;
+            renderLayerList();
+          };
+          probe.src = src;
+        } else {
+          if (!confirm('Changing the depth map will reload it. Are you sure?')) return;
+          resetDepthHistory();
+          dmImage.src = src;
+          layers[0].depthSrc = src;
+          renderLayerList();
+        }
+      } else {
+        layers[index][key] = src;
+        renderLayerList();
+      }
+    }
+
+    function moveLayer(from, to) {
+      if (to < 0 || to >= layers.length || from === to) return;
+      captureActiveLayer();
+      const tmp = layers[from];
+      layers[from] = layers[to];
+      layers[to] = tmp;
+      activateFirstLayer();
+      renderLayerList();
+    }
+
+    function deleteLayer(index) {
+      if (layers.length <= 1) return;
+      captureActiveLayer();
+      layers.splice(index, 1);
+      activateFirstLayer();
+      renderLayerList();
+    }
+
+    function addLayer() {
+      captureActiveLayer();
+      layers.push(blankLayer());
+      renderLayerList();
+    }
+
+    layerAddEl.addEventListener('click', addLayer);
+
+    layerListEl.addEventListener('click', function (event) {
+      const btn = event.target.closest('button[data-act]');
+      if (!btn) return;
+      const row = btn.closest('.k3d-layer');
+      if (!row) return;
+      const index = parseInt(row.dataset.index, 10);
+      const act = btn.dataset.act;
+      if (act === 'up') moveLayer(index, index - 1);
+      else if (act === 'down') moveLayer(index, index + 1);
+      else if (act === 'delete') deleteLayer(index);
+    });
+
+    layerListEl.addEventListener('dragover', allowDrop);
+    layerListEl.addEventListener('dragenter', function (event) {
+      const t = event.target.closest('.k3d-thumb');
+      if (t) t.classList.add('uk-dragover');
+    });
+    layerListEl.addEventListener('dragleave', function (event) {
+      const t = event.target.closest('.k3d-thumb');
+      if (t) t.classList.remove('uk-dragover');
+    });
+    layerListEl.addEventListener('drop', function (event) {
+      event.preventDefault();
+      const thumb = event.target.closest('[data-part]');
+      if (!thumb) return;
+      const row = thumb.closest('.k3d-layer');
+      if (!row) return;
+      const index = parseInt(row.dataset.index, 10);
+      const part = thumb.dataset.part;
+      if (!event.dataTransfer.files.length) return;
+      if (event.dataTransfer.files.length !== 1) {
+        alert('Please only drag one PNG file at a time!');
+        return;
+      }
+      const file = event.dataTransfer.files[0];
+      if (!/\.png$/i.test(file.name) && file.type !== 'image/png') {
+        alert('Please make sure your file is in PNG format!');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function (e) { setLayerSource(index, part, e.target.result); };
+      reader.readAsDataURL(file);
+    });
+
+    renderLayerList();
+
     let reverseMapBuffer;
+
     let needUpdateReverseMapBuffer = true;
 
     PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY });
@@ -1746,97 +1961,9 @@
 
 
 
-    // Drop
-    bm1Canvas.addEventListener('drop', dropBaseMap);
-    bm1Canvas.addEventListener('dragover', allowDrop);
-    bm1Canvas.addEventListener('dragenter', dragenter);
-    bm1Canvas.addEventListener('dragleave', dragleave);
-    dmCanvas.addEventListener('drop', dropDepthMap);
-    dmCanvas.addEventListener('dragover', allowDrop);
-    dmCanvas.addEventListener('dragenter', dragenter);
-    dmCanvas.addEventListener('dragleave', dragleave);
-
+    // Drop is handled by delegation on #layer-list (see the layer list code).
     function allowDrop(event) {
       event.preventDefault();
-    }
-    function dropBaseMap(event) {
-      event.preventDefault();
-      if (event.dataTransfer.files.length != 1) {
-        alert("Please only drag one PNG file at a time!");
-        return;
-      }
-      if ("image/png" !== event.dataTransfer.items[0].type) {
-        alert("Please make sure your file is in PNG format!");
-        return;
-      }
-
-      var img = document.createElement("img");
-      var reader = new FileReader();
-      reader.onload = (function (tmpImg) {
-        return function (e) {
-          tmpImg.onload = function () {
-            if (confirm('Changing the base map will reload the depth map with a blank one. Are you sure?')) {
-              bmImage.src = e.target.result;
-
-              strokes = [];
-              redoList = [];
-              for (let k = 0; k < cacheSnapshots.length; k++) {
-                cacheSnapshots[k].dm.destroy(true);
-                cacheSnapshots[k].mm.destroy(true);
-                cacheSnapshots[k].jm.destroy(true);
-              }
-              cacheSnapshots = [];
-
-
-              // Just to make sure DM has an image of same size
-              dmImage.src = e.target.result;
-            }
-          }
-          tmpImg.src = e.target.result;
-        };
-      })(img);
-      reader.readAsDataURL(event.dataTransfer.files[0]);
-    }
-
-    function dropDepthMap(event) {
-      event.preventDefault();
-      if (event.dataTransfer.files.length != 1) {
-        alert("Please only drag one PNG file at a time!");
-        return;
-      }
-      if ("image/png" !== event.dataTransfer.items[0].type) {
-        alert("Please make sure your file is in PNG format!");
-        return;
-      }
-
-      var img = document.createElement("img");
-      var reader = new FileReader();
-      reader.onload = (function (tmpImg) {
-        return function (e) {
-          tmpImg.onload = function () {
-            if (confirm('Changing the depth map will reload the depth map with a blank one. Are you sure?')) {
-              dmImage.src = e.target.result;
-              strokes = [];
-              redoList = [];
-
-              for (let k = 0; k < cacheSnapshots.length; k++) {
-                cacheSnapshots[k].dm.destroy(true);
-                cacheSnapshots[k].mm.destroy(true);
-                cacheSnapshots[k].jm.destroy(true);
-              }
-              cacheSnapshots = [];
-            }
-          }
-          tmpImg.src = e.target.result;
-        };
-      })(img);
-      reader.readAsDataURL(event.dataTransfer.files[0]);
-    }
-    function dragenter(event) {
-      event.target.classList.add('uk-dragover');
-    }
-    function dragleave(event) {
-      event.target.classList.remove('uk-dragover');
     }
 
 

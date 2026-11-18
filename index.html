@@ -62,17 +62,31 @@
     <ul id="top-switcher" class="uk-switcher uk-margin uk-padding-small">
       <li>
         <div class="uk-margin-xlarge-bottom">
-          <h4 class="uk-heading-line uk-text-center"><span>Base Map</span></h1>
+          <div id="layer-list">
+            <div class="k3d-layer is-first" data-index="0">
+              <div class="k3d-layer-head">
+                <span class="k3d-layer-name">Layer 1</span>
+                <span class="k3d-layer-btns">
+                  <button type="button" data-act="down" uk-tooltip="Move down">&#8595;</button>
+                  <button type="button" data-act="delete" uk-tooltip="Delete layer" disabled>&#10005;</button>
+                </span>
+              </div>
+              <div class="k3d-layer-thumbs">
+                <canvas id="base-map-canvas" class="k3d-thumb" data-part="color"
+                  uk-tooltip="Colour + alpha. Drop a PNG here."></canvas>
+                <canvas id="depth-map-canvas" class="k3d-thumb" data-part="depth"
+                  uk-tooltip="Depth (red channel). Drop a PNG here."></canvas>
+              </div>
+            </div>
+          </div>
 
-            <canvas id="base-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
+          <button type="button" id="layer-add-button"
+            class="uk-button uk-button-default uk-width-1-1 uk-margin-small-top">
+            + Add layer
+          </button>
 
-            <h4 class="uk-heading-line uk-text-center"><span>Depth Map</span></h1>
-
-              <canvas id="depth-map-canvas" class="uk-card uk-card-default uk-card-hover"></canvas>
-
-
-              <!-- Bottom button bar -->
-              <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
+          <!-- Bottom button bar -->
+          <div class="uk-background-muted uk-button-group uk-child-width-expand" style="
             height: 50px; 
             width: 320px;
             position: fixed;
@@ -82,12 +96,12 @@
             overflow-x: hidden;
             overflow-y: overlay;
           ">
-                <button class="uk-button uk-button-default uk-padding-remove" id="file-import-button"
-                  uk-tooltip="To Import your own base map or depth map, simply drag your file from your computer to the thumbnails above."
-                  disabled><i class="material-icons icon-align">file_upload</i></button>
-                <button class="uk-button uk-button-default uk-padding-remove" id="file-download-button"
-                  uk-tooltip="Export Depth Map"><i class="material-icons icon-align">file_download</i></button>
-              </div>
+            <button class="uk-button uk-button-default uk-padding-remove" id="file-import-button"
+              uk-tooltip="To Import your own base map or depth map, simply drag your file from your computer to the thumbnails above."
+              disabled><i class="material-icons icon-align">file_upload</i></button>
+            <button class="uk-button uk-button-default uk-padding-remove" id="file-download-button"
+              uk-tooltip="Export Depth Map"><i class="material-icons icon-align">file_download</i></button>
+          </div>
         </div>
       </li>
 
