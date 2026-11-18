@@ -458,8 +458,8 @@
 
     let needUpdateReverseMapBuffer = true;
 
-    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0 });
-    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0 });
+    PIXI.DepthPerspectiveFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0, pomMode: 0, pomAlpha: 0 });
+    PIXI.DepthPerspectiveOffsetFilter = new PIXI.Filter(null, displacementFrag, { displacementMap: PIXI.Texture.EMPTY, baseMap: PIXI.Texture.EMPTY, alphaOnly: 0, pomMode: 0, pomAlpha: 0 });
     PIXI.DepthPerspectiveFilter.apply = function (filterManager, input, output) {
       this.uniforms.dimensions = {};
       if (input && input.width && input.height) {
@@ -759,6 +759,8 @@
         maskColors: maskColorsZero,
         alphaOnly: 1,
         displayMode: 2,
+        pomMode: 0,
+        pomAlpha: 0,
         pan: [0, 0],
         zoom: 1,
         offset: [0, 0],
@@ -790,6 +792,8 @@
         this.uniforms.focus = g.focus;
         this.uniforms.quality = g.quality || 1.0;
         this.uniforms.displayMode = g.displayMode;
+        this.uniforms.pomMode = g.pomMode || 0;
+        this.uniforms.pomAlpha = g.pomAlpha || 0;
 
         this.uniforms.alphaOnly = 1;
         this.uniforms.jiggleMapMode = 0;
@@ -2314,6 +2318,18 @@
         if (isMaskEditing && maskEditingIdLast != maskEditingId) {
           document.getElementById('mask-edit-button-' + maskEditingIdLast).click();
         }
+      } else if (key.key === 'p') {
+        // Cycle POM mode: 0=default(3.0x), 1=original(1.5x), 2=6.0x
+        const modes = [0, 1, 2];
+        const u = window.displacementFilter.uniforms;
+        const idx = modes.indexOf(u.pomMode);
+        u.pomMode = modes[(idx + 1) % modes.length];
+        updatePOMIndicator();
+      } else if (key.key === 'P') {
+        // Toggle alpha-aware ray marching
+        const u = window.displacementFilter.uniforms;
+        u.pomAlpha = u.pomAlpha === 1 ? 0 : 1;
+        updatePOMIndicator();
       } else if (key.key === ',' && strokes.length != 0 && !isDrawing) {
         redoList.push(strokes.pop());
         redraw();
@@ -2349,19 +2365,39 @@
     let modifyKey = '';
 
     var tooltipSpan = document.getElementById('tooltip-span');
+    var pomIndicator = document.getElementById('pom-indicator');
+
+    function updatePOMIndicator() {
+      const u = window.displacementFilter.uniforms;
+      const modeNames = {
+        0: 'default (3.0x)',
+        1: 'original (1.5x)',
+        2: '6.0x'
+      };
+      pomIndicator.innerText = 'POM: ' + u.pomMode + ' (' + (modeNames[u.pomMode] || '?') + ')  |  pomAlpha: ' + u.pomAlpha;
+      pomIndicator.style.visibility = 'visible';
+      // Auto-hide after 2 seconds
+      if (updatePOMIndicator._timer) clearTimeout(updatePOMIndicator._timer);
+      updatePOMIndicator._timer = setTimeout(() => {
+        pomIndicator.style.visibility = 'hidden';
+      }, 2000);
+    }
+    window.updatePOMIndicator = updatePOMIndicator;
 
     window.onmousemove = function (e) {
       let x = e.clientX;
       let y = e.clientY;
       tooltipSpan.style.top = (y + 40) + 'px';
       tooltipSpan.style.left = (x + 40) + 'px';
+      pomIndicator.style.top = (y + 40) + 'px';
+      pomIndicator.style.left = (x + 40) + 'px';
 
 
       if (e.altKey) {
-        key.preventDefault();
+        e.preventDefault();
         modifyKey = 'alt';
       } else if (e.shiftKey) {
-        key.preventDefault();
+        e.preventDefault();
         modifyKey = 'shift';
       } else {
         modifyKey = '';
@@ -2873,6 +2909,13 @@ uniform vec2 pan;
 uniform float zoom;
 uniform int displayMode;
 
+// TEMP debug: 0 = original interpolation, 1 = lower-depth bracket,
+// 2 = always the last in-front sample, 3 = always the hit sample.
+uniform int pomMode;
+// TEMP debug: when 1, transparent colour pixels are treated as empty space
+// (depth 0) so the ray does not stop on the layer silhouette.
+uniform int pomAlpha;
+
 // 0 = replace transparent pixels with the purple editor backdrop (legacy
 // single-layer view).  1 = keep the layer's own alpha so layers can be
 // composited over each other and over the backdrop.
@@ -3050,33 +3093,55 @@ void main(void)
     float dpos;
     float dposLast;
 
-    for (float i = 0.0; i < MAXSTEPS * MAXOFFSETLENGTH * MAXZOOM; ++i)
+    float depthLast = dmin;
+    float depthHit = dmin;
+
+    // GLSL ES 1.00 requires a constant loop bound.  Use MAXSTEPS (1000) and
+    // break early once the ray has marched the computed number of steps or
+    // hit the surface.
+    for (int i = 0; i < int(MAXSTEPS); ++i)
     {
-        vec2 vpos = pos + vector[1] - i * vstep;
-        dpos = 1.0 - i * dstep;
+        if (float(i) >= steps) break;
+        vec2 vpos = pos + vector[1] - float(i) * vstep;
+        dpos = 1.0 - float(i) * dstep;
         float depth = textureDepth(vpos).r;
 
-        // This is good for in-game rendering but bad for cursor projection when drawing depth maps
-        // if (textureDiffuseNoBg(vpos)[3] == 0.0)
-        // {
-        //     depth = 0.0;
-        // }
+        // Transparent pixels carry no surface.  Treat them as empty space so
+        // the ray passes through the layer silhouette instead of stretching
+        // edge texels across the background.
+        if (pomAlpha == 1 && textureDiffuseNoBg(vpos).a < 0.5)
+        {
+            depth = dmin;
+        }
 
         depth = clamp(depth, dmin, dmax);
 
         if (dpos > depth)
         {
             posSumLast = vpos;
+            depthLast = depth;
             dposLast = dpos;
         }
         else
         {
             posSum = vpos;
+            depthHit = depth;
             weigth = (depth - dposLast) / dstep;
             break;
         }
     };
-    vec2 coord = (posSum - posSumLast) * -clamp(weigth * 0.5 + 0.5, 0.0, 1.5) + posSum;
+
+    vec2 coord;
+    // POM modes: overshoot factors for the original interpolation.
+    // 0 = default, 3.0x overshoot
+    // 1 = original behavior, 1.5x overshoot
+    // 2 = 6.0x overshoot
+    float maxOvershoot;
+    if (pomMode == 0) maxOvershoot = 3.0;
+    else if (pomMode == 1) maxOvershoot = 1.5;
+    else maxOvershoot = 6.0;
+    float overshoot = clamp(weigth * 0.5 + 0.5, 0.0, maxOvershoot);
+    coord = (posSum - posSumLast) * -overshoot + posSum;
 
     vec4 outColor;
     if (displayMode == 0)
